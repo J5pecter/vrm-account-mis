@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VRM Account MIS</title>
+  <script>/* apply saved theme before paint to avoid a flash */(function(){try{var t=localStorage.getItem('vrm_theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ─────────────────────────  Design tokens  ─────────────────────────
+       Palette: "Aurora" — a graded violet-indigo primary with a jade
+       secondary, on warm-neutral paper (light) and deep desaturated
+       indigo-navy (dark). Semantic hues tuned to sit together.        */
+    :root{
+      /* neutral surface ramp — subtly warm so white surfaces feel premium */
+      --bg:#f3f4f8; --bg-2:#e9ebf2;
+      --surface:#ffffff; --surface-2:#f8f9fc;
+      --line:#e6e8f0; --line-strong:#d4d8e4;
+
+      /* ink ramp — near-black with a cool undertone */
+      --ink:#14162a; --ink-2:#404560; --muted:#7f8699; --muted-2:#a7adbf;
+
+      /* brand — electric indigo-violet */
+      --brand:#5b52f0; --brand-2:#7c74f7; --brand-soft:#ecebfe; --brand-ink:#4038c7;
+      /* secondary / positive — jade */
+      --teal:#0ea885; --teal-soft:#e2f6f0;
+      --amber:#e0891b; --amber-soft:#fcefdb;
+      --rose:#e5484d; --rose-soft:#fce9ea;
+      --ok:#2fa363; --ok-soft:#e6f6ec;
+
+      --grad-brand:linear-gradient(135deg,#6d64f5,#5b52f0 55%,#4f46e5);
+      --grad-bar:linear-gradient(180deg,#7c74f7,#5b52f0);
+
+      --radius:16px; --radius-sm:11px; --radius-xs:8px;
+      --shadow-sm:0 1px 2px rgba(20,22,42,.05), 0 1px 3px rgba(20,22,42,.04);
+      --shadow:0 4px 14px rgba(20,22,42,.07), 0 14px 34px rgba(20,22,42,.06);
+      --shadow-lg:0 14px 30px rgba(20,22,42,.14), 0 28px 64px rgba(20,22,42,.14);
+      --ring:0 0 0 3px rgba(91,82,240,.18);
+      --side:264px;
+    }
+
+    /* dark tokens — applied via system preference OR explicit data-theme="dark" */
+    :root[data-theme="dark"]{
+      --bg:#0b0e17; --bg-2:#10131f;
+      --surface:#161a28; --surface-2:#11141f;
+      --line:#232838; --line-strong:#323a51;
+      --ink:#eef0f7; --ink-2:#c3c8d8; --muted:#8b92a6; --muted-2:#646c82;
+      --brand:#8f88ff; --brand-2:#aba4ff; --brand-soft:#211f45; --brand-ink:#cbc6ff;
+      --teal:#2dd4aa; --teal-soft:#0e2f29;
+      --amber:#f5b445; --amber-soft:#3a2c12;
+      --rose:#ff6b70; --rose-soft:#3a1a1d;
+      --ok:#4cc98a; --ok-soft:#12311f;
+      --grad-brand:linear-gradient(135deg,#9a93ff,#8f88ff 55%,#7c74f7);
+      --grad-bar:linear-gradient(180deg,#aba4ff,#8f88ff);
+      --shadow-sm:0 1px 2px rgba(0,0,0,.34);
+      --shadow:0 6px 22px rgba(0,0,0,.4);
+      --shadow-lg:0 18px 48px rgba(0,0,0,.55);
+      --ring:0 0 0 3px rgba(143,136,255,.3);
+    }
+    @media (prefers-color-scheme: dark){
+      :root:not([data-theme="light"]){
+        --bg:#0b0e17; --bg-2:#10131f;
+        --surface:#161a28; --surface-2:#11141f;
+        --line:#232838; --line-strong:#323a51;
+        --ink:#eef0f7; --ink-2:#c3c8d8; --muted:#8b92a6; --muted-2:#646c82;
+        --brand:#8f88ff; --brand-2:#aba4ff; --brand-soft:#211f45; --brand-ink:#cbc6ff;
+        --teal:#2dd4aa; --teal-soft:#0e2f29;
+        --amber:#f5b445; --amber-soft:#3a2c12;
+        --rose:#ff6b70; --rose-soft:#3a1a1d;
+        --ok:#4cc98a; --ok-soft:#12311f;
+        --grad-brand:linear-gradient(135deg,#9a93ff,#8f88ff 55%,#7c74f7);
+        --grad-bar:linear-gradient(180deg,#aba4ff,#8f88ff);
+        --shadow-sm:0 1px 2px rgba(0,0,0,.34);
+        --shadow:0 6px 22px rgba(0,0,0,.4);
+        --shadow-lg:0 18px 48px rgba(0,0,0,.55);
+        --ring:0 0 0 3px rgba(143,136,255,.3);
+      }
+    }
+    /* smooth theme cross-fade on the elements that change surface/ink */
+    body,.sidebar,.topbar,.card,.kpi,.vcard,.vitem,.lk-box,.lk-row,.modal,
+    input,select,textarea,.btn.ghost,.icon-btn,.date-chip,th,tfoot td,.code-pill,.pill{
+      transition:background-color .28s ease, border-color .28s ease, color .2s ease, box-shadow .2s ease;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      -webkit-font-smoothing:antialiased; font-size:14px; line-height:1.5;
+    }
+    ::selection{background:var(--brand-soft);color:var(--brand-ink)}
+    button{font-family:inherit}
+    /* scrollbar */
+    *::-webkit-scrollbar{width:10px;height:10px}
+    *::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:10px;border:2px solid transparent;background-clip:content-box}
+    *::-webkit-scrollbar-thumb:hover{background:var(--muted-2);background-clip:content-box}
+
+    /* ─────────────────────────  Sidebar  ───────────────────────── */
+    .sidebar{
+      position:fixed; inset:0 auto 0 0; width:var(--side); z-index:40;
+      background:var(--surface); border-right:1px solid var(--line);
+      display:flex; flex-direction:column; padding:20px 16px;
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .brand{display:flex;align-items:center;gap:12px;padding:6px 8px 20px}
+    .brand .logo{
+      width:42px;height:42px;border-radius:12px;flex:0 0 auto;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.35);
+    }
+    .brand .logo svg{width:22px;height:22px}
+    .brand .bt{font-weight:800;font-size:15.5px;letter-spacing:-.02em;line-height:1.15}
+    .brand .bs{font-size:11px;color:var(--muted);font-weight:500}
+
+    .navgroup{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted-2);padding:16px 12px 8px}
+    .navbtn{
+      display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+      border:0;background:transparent;color:var(--ink-2);font-size:14px;font-weight:600;
+      padding:11px 12px;border-radius:11px;cursor:pointer;transition:.15s;position:relative;
+    }
+    .navbtn svg{width:18px;height:18px;flex:0 0 auto;opacity:.75}
+    .navbtn:hover{background:var(--bg-2);color:var(--ink)}
+    .navbtn.active{background:var(--brand-soft);color:var(--brand-ink)}
+    .navbtn.active svg{opacity:1}
+    .navbtn.active::before{content:"";position:absolute;left:-16px;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;background:var(--brand)}
+
+    .side-foot{margin-top:auto;padding:14px 12px 4px;border-top:1px solid var(--line)}
+    .side-foot .live{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:500;cursor:default}
+    .dotlive{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft);flex:0 0 auto}
+    .dotlive.wait{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);animation:pulse 1.2s ease-in-out infinite}
+    .dotlive.off{background:var(--rose);box-shadow:0 0 0 3px var(--rose-soft)}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+    #conn.retry{cursor:pointer;color:var(--rose)}
+
+    /* ─────────────────────────  Shell / topbar  ───────────────────────── */
+    .shell{margin-left:var(--side);transition:margin .28s cubic-bezier(.4,0,.2,1);min-height:100vh;display:flex;flex-direction:column}
+    .shell.full{margin-left:0}
+    .topbar{
+      position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;
+      padding:16px 28px;background:color-mix(in srgb,var(--bg) 82%, transparent);
+      backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--line);
+    }
+    .icon-btn{
+      display:grid;place-items:center;width:40px;height:40px;border-radius:11px;
+      background:var(--surface);border:1px solid var(--line);cursor:pointer;color:var(--ink-2);transition:.15s;
+    }
+    .icon-btn:hover{background:var(--bg-2);border-color:var(--line-strong)}
+    .icon-btn svg{width:19px;height:19px}
+    .theme-btn{position:relative}
+    .theme-btn .ic-sun,.theme-btn .ic-moon{position:absolute;top:50%;left:50%;width:19px;height:19px;margin:-9.5px 0 0 -9.5px;transition:opacity .22s ease,transform .32s cubic-bezier(.4,0,.2,1)}
+    .theme-btn .ic-sun{opacity:0;transform:rotate(-90deg) scale(.5)}
+    .theme-btn .ic-moon{opacity:1;transform:none}
+    .theme-btn.is-dark .ic-sun{opacity:1;transform:none;color:var(--amber)}
+    .theme-btn.is-dark .ic-moon{opacity:0;transform:rotate(90deg) scale(.5)}
+    .topbar .tt{font-size:19px;font-weight:800;letter-spacing:-.03em;margin:0;line-height:1.1}
+    .topbar .ts{font-size:12.5px;color:var(--muted);margin:2px 0 0;font-weight:500}
+    .topbar .spacer{flex:1}
+    .date-chip{
+      display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);
+      background:var(--surface);border:1px solid var(--line);padding:9px 14px;border-radius:11px;
+    }
+    .date-chip svg{width:16px;height:16px;color:var(--brand)}
+
+    .wrap{max-width:1180px;margin:0 auto;width:100%;padding:26px 28px 72px}
+    .panel{display:none;animation:fade .35s ease}
+    .panel.show{display:block}
+    @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .sec{display:flex;align-items:center;gap:10px;margin:30px 0 14px}
+    .sec h2{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin:0}
+    .sec .line{flex:1;height:1px;background:var(--line)}
+    .sec .badge{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg-2);padding:3px 9px;border-radius:20px}
+
+    /* ─────────────────────────  KPI cards  ───────────────────────── */
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+    .kpi{
+      position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);
+      border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow-sm);transition:.2s;
+    }
+    .kpi:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+    .kpi .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .kpi .lbl{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.01em}
+    .kpi .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center}
+    .kpi .ic svg{width:19px;height:19px}
+    .kpi .val{font-size:34px;font-weight:800;letter-spacing:-.035em;font-variant-numeric:tabular-nums;line-height:1}
+    .kpi .cap{font-size:11.5px;color:var(--muted-2);margin-top:8px;font-weight:500}
+    .kpi.i-today  .ic{background:var(--brand-soft);color:var(--brand)}
+    .kpi.i-month  .ic{background:var(--teal-soft);color:var(--teal)}
+    .kpi.i-year   .ic{background:var(--amber-soft);color:var(--amber)}
+    .kpi.i-vrm    .ic{background:var(--rose-soft);color:var(--rose)}
+    .kpi.i-today  .val{color:var(--brand)}
+    .kpi.i-month  .val{color:var(--teal)}
+    .kpi.i-year   .val{color:var(--amber)}
+
+    /* ─────────────────────────  Cards / tables  ───────────────────────── */
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+    .card-pad{padding:20px 22px}
+    .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line)}
+    .card-head h3{margin:0;font-size:15px;font-weight:750;letter-spacing:-.01em}
+    .card-head .sub{font-size:12px;color:var(--muted);margin-top:2px;font-weight:500}
+
+    .table-scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{text-align:left;padding:13px 22px;font-size:13.5px;border-bottom:1px solid var(--line)}
+    th{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--surface-2)}
+    td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+    tbody tr{transition:background .12s}
+    tbody tr:hover{background:var(--surface-2)}
+    tbody tr:last-child td{border-bottom:0}
+    tfoot td{font-weight:750;background:var(--surface-2);font-variant-numeric:tabular-nums;border-top:2px solid var(--line-strong)}
+    .rank{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--bg-2);color:var(--muted);font-size:11px;font-weight:800;margin-right:2px}
+    .rank.r1{background:var(--amber-soft);color:var(--amber)}
+    .rank.r2{background:var(--brand-soft);color:var(--brand)}
+    .rank.r3{background:var(--teal-soft);color:var(--teal)}
+    .vname{font-weight:650;color:var(--ink)}
+    .avatar{display:inline-flex;align-items:center;gap:10px}
+    .avatar .ini{width:30px;height:30px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;font-size:11.5px;font-weight:800;color:#fff}
+    .code-pill{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12.5px;font-weight:600;color:var(--ink-2);background:var(--bg-2);padding:3px 9px;border-radius:7px}
+    .sharecell{min-width:150px}
+    .sharebar{display:flex;align-items:center;gap:10px}
+    .track{flex:1;height:8px;border-radius:5px;background:var(--bg-2);overflow:hidden}
+    .fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .5s cubic-bezier(.4,0,.2,1)}
+    .pct{font-size:11.5px;color:var(--muted);font-weight:600;min-width:34px;text-align:right}
+
+    .empty{padding:44px 20px;text-align:center;color:var(--muted)}
+    .empty svg{width:38px;height:38px;opacity:.4;margin-bottom:10px}
+    .empty p{margin:0;font-size:13.5px}
+
+    /* ─────────────────────────  Forms  ───────────────────────── */
+    label{display:block;font-size:12px;font-weight:650;color:var(--ink-2);margin:0 0 6px}
+    label .opt{font-weight:500;color:var(--muted)}
+    input,select,textarea{
+      width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:var(--radius-xs);
+      font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface);transition:.15s;
+    }
+    input::placeholder,textarea::placeholder{color:var(--muted-2)}
+    input:focus,select:focus,textarea:focus{outline:0;border-color:var(--brand);box-shadow:var(--ring)}
+    input:disabled,select:disabled{opacity:.5;cursor:not-allowed}
+    textarea{resize:vertical;min-height:74px;line-height:1.55}
+    select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238993a8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 11px center;padding-right:34px}
+
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row>div{flex:1;min-width:120px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      border:0;background:var(--brand);color:#fff;font-weight:650;font-size:14px;
+      padding:10px 18px;border-radius:var(--radius-xs);cursor:pointer;transition:.15s;white-space:nowrap;
+      box-shadow:0 4px 12px rgba(79,70,229,.24);
+    }
+    .btn svg{width:16px;height:16px}
+    .btn:hover{background:var(--brand-2);transform:translateY(-1px);box-shadow:0 6px 16px rgba(79,70,229,.32)}
+    .btn:active{transform:translateY(0)}
+    .btn.ghost{background:var(--surface);color:var(--ink-2);border:1px solid var(--line-strong);box-shadow:none}
+    .btn.ghost:hover{background:var(--bg-2);color:var(--ink);transform:none}
+    .btn.mini{padding:7px 12px;font-size:12.5px;box-shadow:none}
+    .btn.icon{padding:8px;border-radius:9px}
+    .btn.icon svg{width:16px;height:16px}
+    .btn.danger{background:transparent;color:var(--rose);border:1px solid transparent;box-shadow:none}
+    .btn.danger:hover{background:var(--rose-soft);transform:none}
+    .btn.block{width:100%}
+
+    /* segmented / chips */
+    .hint{font-size:12px;color:var(--muted);margin-top:9px;line-height:1.5}
+    .hint b{color:var(--ink-2);font-weight:650}
+    .divider{height:1px;background:var(--line);margin:18px 0}
+    .dashed{border-top:1px dashed var(--line-strong);margin-top:18px;padding-top:18px}
+
+    /* VRM manager list */
+    .vlist{display:flex;flex-direction:column;gap:8px;margin-top:14px;max-height:340px;overflow-y:auto;padding-right:2px}
+    .vitem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);transition:.15s}
+    .vitem:hover{border-color:var(--line-strong);background:var(--surface)}
+    .vitem .pill{font-size:11px;font-weight:650;color:var(--muted);background:var(--bg-2);padding:2px 8px;border-radius:20px}
+
+    /* file upload */
+    .drop{position:relative;border:1.5px dashed var(--line-strong);border-radius:var(--radius-sm);background:var(--surface-2);padding:16px;text-align:center;transition:.15s;cursor:pointer}
+    .drop:hover{border-color:var(--brand);background:var(--brand-soft)}
+    .drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .drop svg{width:26px;height:26px;color:var(--brand);margin-bottom:6px}
+    .drop .dt{font-size:13px;font-weight:650;color:var(--ink)}
+    .drop .ds{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+    /* per-VRM summary cards */
+    .vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:14px}
+    .vcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);transition:.2s}
+    .vcard:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+    .vcard .vh{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .vcard .vn{font-weight:700;font-size:13.5px;letter-spacing:-.01em}
+    .vcard .vbadge{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);padding:3px 8px;border-radius:20px}
+    .vstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+    .vstats .s{background:var(--surface-2);border-radius:10px;padding:9px 4px}
+    .vstats .s .n{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+    .vstats .s .l{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:5px;font-weight:600}
+    .vstats .s.m .n{color:var(--teal)} .vstats .s.y .n{color:var(--amber)}
+
+    /* filter result */
+    .fresult{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+    .fbig{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+    .fbig .n{font-size:40px;font-weight:800;letter-spacing:-.04em;color:var(--brand);font-variant-numeric:tabular-nums;line-height:1}
+    .fbig .cap{font-size:13px;color:var(--muted);font-weight:500}
+    .fbars{margin-top:16px;display:flex;flex-direction:column;gap:2px}
+    .fbar{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+    .fbar:last-child{border-bottom:0}
+    .fbar .fn{flex:0 0 160px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:9px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .fbar .ftrack{flex:1;height:9px;background:var(--bg-2);border-radius:6px;overflow:hidden}
+    .fbar .ffill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+    .fbar .fv{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:13.5px}
+
+    /* ─────────────────────────  Toasts  ───────────────────────── */
+    .toasts{position:fixed;right:22px;bottom:22px;z-index:200;display:flex;flex-direction:column;gap:10px;max-width:360px}
+    .toast{
+      display:flex;align-items:flex-start;gap:11px;background:var(--surface);border:1px solid var(--line);
+      border-left:3px solid var(--brand);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow-lg);
+      animation:slideIn .3s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes slideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+    .toast.out{animation:slideOut .25s ease forwards}
+    @keyframes slideOut{to{opacity:0;transform:translateX(30px)}}
+    .toast.ok{border-left-color:var(--ok)} .toast.warn{border-left-color:var(--amber)} .toast.err{border-left-color:var(--rose)}
+    .toast .ti{width:20px;height:20px;flex:0 0 auto;margin-top:1px}
+    .toast.ok .ti{color:var(--ok)} .toast.warn .ti{color:var(--amber)} .toast.err .ti{color:var(--rose)} .toast .ti{color:var(--brand)}
+    .toast .tx{font-size:13px;line-height:1.45;color:var(--ink)}
+    .toast .tx b{font-weight:700}
+
+    /* ─────────────────────────  Loader / backdrop  ───────────────────────── */
+    .loader{position:fixed;inset:0;z-index:100;display:none;place-items:center;background:color-mix(in srgb,var(--bg) 60%,transparent);backdrop-filter:blur(2px)}
+    .loader.show{display:grid}
+    .spinner{width:38px;height:38px;border:3.5px solid var(--line-strong);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* first-run setup */
+    .setup{position:fixed;inset:0;z-index:180;display:none;place-items:center;padding:22px;background:var(--bg)}
+    .setup.show{display:grid}
+    .setup-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-lg);max-width:440px;width:100%;padding:30px 28px;text-align:center}
+    .setup-logo{width:56px;height:56px;margin:0 auto 16px;border-radius:15px;display:grid;place-items:center;color:#fff;background:var(--grad-brand);box-shadow:0 10px 24px rgba(91,82,240,.35)}
+    .setup-logo svg{width:28px;height:28px}
+    .setup-card h2{margin:0 0 8px;font-size:20px;font-weight:800;letter-spacing:-.02em}
+    .setup-card p{margin:0 0 18px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+    .setup-card code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--bg-2);padding:2px 6px;border-radius:6px;color:var(--brand-ink)}
+    .setup-hint{font-size:12px;color:var(--muted);margin:14px 0 0}
+    .backdrop{display:none;position:fixed;inset:0;background:rgba(10,14,26,.5);z-index:35;backdrop-filter:blur(2px)}
+
+    /* modal (confirm) */
+    .modal-bg{position:fixed;inset:0;z-index:150;display:none;place-items:center;background:rgba(10,14,26,.55);backdrop-filter:blur(3px);padding:20px}
+    .modal-bg.show{display:grid;animation:fade .2s}
+    .modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-lg);max-width:400px;width:100%;padding:24px;animation:pop .25s cubic-bezier(.4,0,.2,1)}
+    @keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+    .modal .mi{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--rose-soft);color:var(--rose);margin-bottom:14px}
+    .modal .mi svg{width:23px;height:23px}
+    .modal h3{margin:0 0 6px;font-size:17px;font-weight:750}
+    .modal p{margin:0 0 20px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+    .modal .acts{display:flex;gap:10px;justify-content:flex-end}
+
+    /* ─────────────────────────  Trend chart  ───────────────────────── */
+    .chart-toolbar{display:flex;align-items:center;gap:8px}
+    .chart-toolbar select{width:auto;min-width:104px;padding:8px 30px 8px 12px;font-size:13px}
+    .chart-wrap{padding:14px 10px 8px}
+    .chart-svg{width:100%;height:auto;display:block;overflow:visible;font-family:inherit}
+    .chart-svg .grid{stroke:var(--line);stroke-width:1}
+    .chart-svg .axis{fill:var(--muted);font-size:11px;font-weight:600}
+    .chart-svg .bar{fill:url(#barGrad);transition:opacity .15s;cursor:pointer;rx:4}
+    .chart-svg .bar:hover{opacity:.82}
+    .chart-svg .barval{fill:var(--ink-2);font-size:11px;font-weight:700;text-anchor:middle}
+    .chart-svg .trendline{fill:none;stroke:var(--teal);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+    .chart-svg .dot{fill:var(--surface);stroke:var(--teal);stroke-width:2.5}
+    .chart-legend{display:flex;gap:18px;justify-content:center;padding:6px 0 12px;font-size:12px;color:var(--muted);font-weight:600}
+    .chart-legend .lg{display:flex;align-items:center;gap:7px}
+    .chart-legend .sw{width:14px;height:9px;border-radius:3px}
+    .chart-empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13.5px}
+
+    /* input modal */
+    .modal .mi.edit{background:var(--brand-soft);color:var(--brand)}
+    .modal .field{margin:2px 0 20px}
+
+    /* client-code lookup */
+    .lk-box{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 16px}
+    .lk-box.hit{background:var(--rose-soft);border-color:transparent}
+    .lk-box.free{background:var(--ok-soft);border-color:transparent}
+    .lk-box .lki{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:0 0 auto}
+    .lk-box .lki svg{width:20px;height:20px}
+    .lk-box.hit .lki{background:var(--rose);color:#fff}
+    .lk-box.free .lki{background:var(--ok);color:#fff}
+    .lk-box .lkt{font-weight:700;font-size:14px}
+    .lk-box .lks{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+    .lk-summary{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:13px;font-weight:600}
+    .lk-summary .taken{color:var(--rose)} .lk-summary .avail{color:var(--ok)}
+    .lk-list{display:flex;flex-direction:column;gap:7px;max-height:280px;overflow-y:auto;padding-right:2px}
+    .lk-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+    .lk-row .st{margin-left:auto;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+    .lk-row .st.taken{color:var(--rose);background:var(--rose-soft)}
+    .lk-row .st.avail{color:var(--ok);background:var(--ok-soft)}
+    .lk-row .who{font-size:12.5px;color:var(--ink-2);font-weight:600}
+    .lk-row .who .d{color:var(--muted);font-weight:500}
+
+    /* ─────────────────────────  Responsive  ───────────────────────── */
+    @media(max-width:1040px){ .sidebar{transform:translateX(-100%)} .sidebar.open{transform:none} .shell{margin-left:0} .sidebar.open ~ .backdrop{display:block} }
+    @media(max-width:860px){ .kpis{grid-template-columns:repeat(2,1fr)} .grid2{grid-template-columns:1fr} }
+    @media(max-width:640px){ .wrap{padding:20px 16px 60px} .topbar{padding:14px 16px} .date-chip{display:none} .sharecell{display:none} .fbar .fn{flex-basis:110px} th,td{padding:12px 14px} }
+  </style>
+</head>
+<body>
+
+<!-- Loader -->
+<div class="loader" id="loader"><div class="spinner"></div></div>
+<!-- Toasts -->
+<div class="toasts" id="toasts"></div>
+
+<!-- First-run setup: connect to the backend -->
+<div class="setup" id="setup">
+  <div class="setup-card">
+    <div class="setup-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-5"/></svg>
+    </div>
+    <h2>Connect your data backend</h2>
+    <p>Paste the Google Apps Script <b>Web App URL</b> (it ends in <code>/exec</code>) that you deployed for this dashboard.</p>
+    <input id="setup-url" placeholder="https://script.google.com/macros/s/…/exec" onkeydown="if(event.key==='Enter')saveApi()">
+    <button class="btn block" style="margin-top:12px" onclick="saveApi()">Connect</button>
+    <p class="setup-hint">One-time backend deploy takes ~5 min — see the project README. The URL is stored only in this browser.</p>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-5"/></svg>
+    </div>
+    <div>
+      <div class="bt">VRM Account MIS</div>
+      <div class="bs">Daily accounts tracker</div>
+    </div>
+  </div>
+
+  <div class="navgroup">Overview</div>
+  <button class="navbtn active" id="nav-dash" onclick="go('dash')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    Dashboard
+  </button>
+  <button class="navbtn" id="nav-mis" onclick="go('dash','mis')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    MIS – VRM summary
+  </button>
+
+  <div class="navgroup">Manage</div>
+  <button class="navbtn" id="nav-analysis" onclick="go('analysis')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    Analysis &amp; Input
+  </button>
+
+  <div class="side-foot">
+    <div class="live" id="conn"><span class="dotlive wait" id="conn-dot"></span> <span id="conn-text">Connecting…</span></div>
+  </div>
+</aside>
+<div class="backdrop" onclick="closeSide()"></div>
+
+<!-- Shell -->
+<div class="shell" id="shell">
+  <div class="topbar">
+    <button class="icon-btn" onclick="toggleSide()" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div>
+      <h1 class="tt" id="pagetitle">Dashboard</h1>
+      <p class="ts">Accounts opened by relationship manager</p>
+    </div>
+    <div class="spacer"></div>
+    <button class="icon-btn theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle theme">
+      <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.6" y1="4.6" x2="6.7" y2="6.7"/><line x1="17.3" y1="17.3" x2="19.4" y2="19.4"/><line x1="4.6" y1="19.4" x2="6.7" y2="17.3"/><line x1="17.3" y1="6.7" x2="19.4" y2="4.6"/></svg>
+    </button>
+    <div class="date-chip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span id="todayLabel">—</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- ══════════════ DASHBOARD ══════════════ -->
+    <section id="panel-dash" class="panel show">
+      <div class="kpis">
+        <div class="kpi i-today">
+          <div class="top"><span class="lbl">Accounts today</span>
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+          </div>
+          <div class="val" id="c-today">0</div><div class="cap">Client codes activated today</div>
+        </div>
+        <div class="kpi i-month">
+          <div class="top"><span class="lbl">This month</span>
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          </div>
+          <div class="val" id="c-month">0</div><div class="cap" id="cap-month">This calendar month</div>
+        </div>
+        <div class="kpi i-year">
+          <div class="top"><span class="lbl">This year</span>
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 9l-5 5-3-3-4 4"/></svg></span>
+          </div>
+          <div class="val" id="c-year">0</div><div class="cap" id="cap-year">This calendar year</div>
+        </div>
+        <div class="kpi i-vrm">
+          <div class="top"><span class="lbl">Active VRMs</span>
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          </div>
+          <div class="val" id="c-vrm">0</div><div class="cap">Relationship managers</div>
+        </div>
+      </div>
+
+      <div class="sec"><h2>Monthly trend</h2><span class="line"></span>
+        <div class="chart-toolbar">
+          <select id="t-vrm" onchange="renderTrend()"><option value="">Whole team</option></select>
+          <select id="t-year" onchange="renderTrend()"></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="chart-wrap" id="trend-wrap"></div>
+        <div class="chart-legend">
+          <span class="lg"><span class="sw" style="background:linear-gradient(90deg,var(--brand),var(--brand-2))"></span> Accounts / month</span>
+          <span class="lg"><span class="sw" style="background:var(--teal)"></span> Trend</span>
+        </div>
+      </div>
+
+      <div class="sec" id="mis"><h2>MIS – VRM wise summary</h2><span class="line"></span>
+        <button class="btn ghost mini" onclick="exportAll('xlsx')" title="Export every entry, all-time">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>All data</button>
+        <span class="badge" id="mis-count">0 VRMs</span>
+      </div>
+      <div class="card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>VRM name</th>
+              <th class="num">Today</th><th class="num">Month</th><th class="num">Year</th><th class="num">Total</th>
+              <th class="sharecell">Share of month</th>
+            </tr></thead>
+            <tbody id="dash-body"></tbody>
+            <tfoot id="dash-foot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="sec"><h2>Filter summary — period &amp; VRM</h2><span class="line"></span></div>
+      <div class="card card-pad">
+        <div class="row">
+          <div><label for="f-year">Year</label><select id="f-year" onchange="renderFilter()"></select></div>
+          <div><label for="f-month">Month</label><select id="f-month" onchange="renderFilter()">
+            <option value="">Whole year</option>
+            <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+            <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+            <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select></div>
+          <div><label for="f-vrm">VRM</label><select id="f-vrm" onchange="renderFilter()"><option value="">Whole team</option></select></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <div><label for="f-from">From date <span class="opt">(optional)</span></label><input type="date" id="f-from" onchange="renderFilter()"></div>
+          <div><label for="f-to">To date <span class="opt">(optional)</span></label><input type="date" id="f-to" onchange="renderFilter()"></div>
+          <div style="flex:0 0 auto;display:flex;align-items:flex-end"><button class="btn ghost" onclick="clearRange()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Clear range</button></div>
+        </div>
+        <p class="hint">Set a <b>From/To</b> range to filter exact dates. While a range is active it overrides the Year &amp; Month selectors.</p>
+        <div class="divider"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn ghost" onclick="exportFiltered('xlsx')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Excel</button>
+          <button class="btn ghost" onclick="exportFiltered('csv')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV</button>
+        </div>
+        <div class="fresult" id="filter-result"></div>
+      </div>
+
+      <div class="sec"><h2>VRM-wise summary</h2><span class="line"></span><span class="badge">Today · Month · Year</span></div>
+      <div class="vgrid" id="vrm-summary"></div>
+    </section>
+
+    <!-- ══════════════ ANALYSIS & INPUT ══════════════ -->
+    <section id="panel-analysis" class="panel">
+      <div class="grid2">
+        <!-- Relationship managers -->
+        <div class="card">
+          <div class="card-head"><div><h3>Relationship managers</h3><div class="sub">Add or remove VRMs from the team</div></div></div>
+          <div class="card-pad">
+            <div class="row" style="align-items:flex-end">
+              <div style="flex:2"><label for="vrm-name">VRM name</label>
+                <input id="vrm-name" placeholder="e.g. Priya Sharma" onkeydown="if(event.key==='Enter')addVRM()"></div>
+              <button class="btn" onclick="addVRM()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add</button>
+            </div>
+            <div class="vlist" id="vrm-list"></div>
+            <p class="hint">Deleting a VRM also removes all of that VRM's account entries.</p>
+          </div>
+        </div>
+
+        <!-- Record accounts -->
+        <div class="card">
+          <div class="card-head"><div><h3>Record accounts opened</h3><div class="sub">Each client code = one account activated</div></div></div>
+          <div class="card-pad">
+            <div class="row" style="align-items:flex-end">
+              <div><label for="e-vrm">VRM</label><select id="e-vrm"></select></div>
+              <div style="flex:0 0 auto"><label for="e-date">Date</label><input type="date" id="e-date"></div>
+            </div>
+            <div style="margin-top:14px">
+              <label for="e-code">Client code(s)</label>
+              <textarea id="e-code" rows="3" placeholder="Paste one or many — separate with commas or new lines&#10;e.g. CL10234, CL10235, CL10240"></textarea>
+              <button class="btn block" style="margin-top:12px" onclick="addEntry()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Add client codes</button>
+              <p class="hint">Each code becomes its own entry. Commas / line breaks split them; blanks and duplicates are skipped automatically.</p>
+            </div>
+            <div class="dashed">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px">
+                <label style="margin:0">Import from Excel / CSV</label>
+                <div style="display:flex;gap:7px">
+                  <button class="btn ghost mini" onclick="downloadTemplate('xlsx')" title="Download a ready-made Excel template">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel template</button>
+                  <button class="btn ghost mini" onclick="downloadTemplate('csv')" title="Download a ready-made CSV template">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV template</button>
+                </div>
+              </div>
+              <div class="drop">
+                <input type="file" id="e-file" accept=".csv,.xlsx,.xls" onchange="importFile(event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div class="dt">Click to choose a file</div>
+                <div class="ds">.xlsx, .xls or .csv</div>
+              </div>
+              <p class="hint">Files with <b>VRM</b>, <b>Date</b> and <b>Client Code</b> columns import automatically (new VRMs are created). A plain single column of codes is assigned to the VRM &amp; date selected above.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <div class="card-head"><div><h3>Client-code lookup</h3><div class="sub">Check who already activated a code — before you record or import it</div></div></div>
+        <div class="card-pad">
+          <div class="row" style="align-items:flex-end">
+            <div style="flex:2"><label for="lk-code">Client code(s)</label>
+              <input id="lk-code" placeholder="e.g. CL10234  (or paste many, comma / line separated)" onkeydown="if(event.key==='Enter')lookupCode()"></div>
+            <button class="btn" onclick="lookupCode()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Look up</button>
+            <button class="btn ghost" onclick="checkBoxCodes()" title="Check the codes typed in Record accounts opened">Check codes in box</button>
+          </div>
+          <p class="hint">A code counts as a duplicate anywhere across the whole team. Paste several to audit a batch before importing.</p>
+          <div id="lk-result" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="sec"><h2>Account entries</h2><span class="line"></span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          <div style="min-width:170px"><input id="entry-search" placeholder="Search code or VRM…" oninput="renderEntries()"></div>
+          <div style="min-width:160px"><select id="filter-vrm" onchange="renderEntries()"><option value="">All VRMs</option></select></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Date</th><th>VRM</th><th>Client code</th><th class="num">Action</th></tr></thead>
+            <tbody id="entry-body"></tbody>
+            <tfoot id="entry-foot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Rename modal -->
+<div class="modal-bg" id="rename-modal">
+  <div class="modal">
+    <div class="mi edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+    <h3>Rename VRM</h3>
+    <p>Update the name everywhere — the VRM list and all their existing entries move with it.</p>
+    <div class="field"><label for="rename-input">New name</label>
+      <input id="rename-input" placeholder="VRM name" onkeydown="if(event.key==='Enter')document.getElementById('rename-ok').click()"></div>
+    <div class="acts">
+      <button class="btn ghost" onclick="closeRename()">Cancel</button>
+      <button class="btn" id="rename-ok">Save name</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <h3 id="modal-title">Are you sure?</h3>
+    <p id="modal-msg"></p>
+    <div class="acts">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="modal-ok" style="background:var(--rose);box-shadow:0 4px 12px rgba(225,29,72,.3)">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════  Backend API (Google Apps Script JSON) ══════════════════════
+// The static site talks to a Google Apps Script Web App deployed as a JSON API.
+// Option A: hardcode your /exec URL below (best for a team — everyone shares it).
+// Option B: leave it blank and paste the URL once in the on-screen setup box (saved per browser).
+const API_URL_HARDCODED = "https://script.google.com/macros/s/AKfycbzu2grUu1kIMsJXlcaSUiCvPBe1JbqypJWuxqoWh7oWt5_JVFao_L9Mo-taVgZqT1VLJw/exec";
+const API_TOKEN         = "d5c09942bbb723bae917476016044f56f8785f2072c6ac8a";   // must equal TOKEN in backend/Code.gs
+
+function getApiUrl(){
+  if(API_URL_HARDCODED) return API_URL_HARDCODED;
+  const q=new URLSearchParams(location.search).get('api');
+  if(q){try{localStorage.setItem('vrm_api',q);}catch(e){} return q;}
+  try{return localStorage.getItem('vrm_api')||"";}catch(e){return "";}
+}
+function showLoader(){document.getElementById('loader').classList.add('show');}
+function hideLoader(){document.getElementById('loader').classList.remove('show');}
+
+// map the old callServer(fn, ...args) calls to a JSON payload for the API
+function buildPayload(fn,args){
+  switch(fn){
+    case 'addVRM':      return {action:'addVRM', name:args[0]};
+    case 'deleteVRM':   return {action:'deleteVRM', name:args[0]};
+    case 'renameVRM':   return {action:'renameVRM', oldName:args[0], newName:args[1]};
+    case 'addEntries':  return {action:'addEntries', vrm:args[0], date:args[1], codes:args[2]};
+    case 'deleteEntry': return {action:'deleteEntry', id:args[0]};
+    case 'importRows':  return {action:'importRows', rows:args[0]};
+    default:            return {action:fn};
+  }
+}
+async function callServer(fn, ...args){
+  const url=getApiUrl();
+  if(!url) throw new Error('Backend URL not set');
+  showLoader();
+  try{
+    let res;
+    if(fn==='getData'){
+      const u=url+(url.indexOf('?')>-1?'&':'?')+'action=getData'+(API_TOKEN?'&token='+encodeURIComponent(API_TOKEN):'');
+      res=await fetch(u,{method:'GET'});
+    }else{
+      const payload=buildPayload(fn,args); if(API_TOKEN)payload.token=API_TOKEN;
+      // send as text/plain (default for a string body) so the browser skips the CORS preflight
+      res=await fetch(url,{method:'POST',body:JSON.stringify(payload)});
+    }
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  }catch(e){
+    toast('Server error: '+e.message,'err');
+    throw e;
+  }finally{ hideLoader(); }
+}
+
+// ══════════════════════  Toasts  ══════════════════════
+const ICONS={
+  ok:'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  warn:'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  err:'<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+  info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+};
+function toast(msg,type='info',ms=4200){
+  const box=document.getElementById('toasts');
+  const el=document.createElement('div');
+  el.className='toast '+type;
+  el.innerHTML=`<svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[type]||ICONS.info}</svg><div class="tx">${msg}</div>`;
+  box.appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),260);},ms);
+}
+
+// ══════════════════════  Theme  ══════════════════════
+function systemPrefersDark(){return window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;}
+function effectiveDark(){const t=document.documentElement.getAttribute('data-theme');return t?t==='dark':systemPrefersDark();}
+function updateThemeIcon(){const b=document.getElementById('themeBtn');if(b)b.classList.toggle('is-dark',effectiveDark());}
+function toggleTheme(){
+  const next=effectiveDark()?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  try{localStorage.setItem('vrm_theme',next);}catch(e){}
+  updateThemeIcon();
+}
+// keep icon in sync if the OS theme changes while on "system"
+if(window.matchMedia){try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(!document.documentElement.getAttribute('data-theme'))updateThemeIcon();});}catch(e){}}
+
+// ══════════════════════  Connection status  ══════════════════════
+function setConn(status){ // 'wait' | 'ok' | 'off'
+  const dot=document.getElementById('conn-dot'),txt=document.getElementById('conn-text'),wrap=document.getElementById('conn');
+  if(!dot)return;
+  dot.className='dotlive'+(status==='wait'?' wait':status==='off'?' off':'');
+  wrap.classList.toggle('retry',status==='off');
+  txt.textContent=status==='ok'?'Synced to Google Sheets':status==='off'?'Offline — click to retry':'Connecting…';
+  wrap.onclick=status==='off'?boot:null;
+}
+
+// ══════════════════════  Confirm modal  ══════════════════════
+let modalCb=null;
+function confirmModal(title,msg,onOk){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-msg').innerHTML=msg;
+  modalCb=onOk;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');modalCb=null;}
+document.getElementById('modal-ok').onclick=()=>{const cb=modalCb;closeModal();if(cb)cb();};
+
+// ── Rename modal ──
+let renameFrom=null;
+function openRename(name){
+  renameFrom=name;
+  const inp=document.getElementById('rename-input');
+  inp.value=name;
+  document.getElementById('rename-modal').classList.add('show');
+  setTimeout(()=>{inp.focus();inp.select();},60);
+}
+function closeRename(){document.getElementById('rename-modal').classList.remove('show');renameFrom=null;}
+document.getElementById('rename-ok').onclick=async()=>{
+  const to=document.getElementById('rename-input').value.trim();
+  const from=renameFrom;
+  if(!to){toast("Name can't be empty.","warn");return;}
+  if(to===from){closeRename();return;}
+  closeRename();
+  const r=await callServer('renameVRM',from,to);
+  if(r.error){toast(r.error,"warn");return;}
+  state=r;renderAll();toast(`Renamed to <b>${esc(to)}</b>.`,"ok");
+};
+
+// ══════════════════════  State & helpers  ══════════════════════
+let state={vrms:[],entries:[]};
+let currentFilter=null;
+
+const todayISO=()=>new Date().toISOString().slice(0,10);
+const isSameDay=iso=>iso===todayISO();
+const isSameMonth=iso=>iso.slice(0,7)===new Date().toISOString().slice(0,7);
+const isSameYear=iso=>iso.slice(0,4)===String(new Date().getFullYear());
+const fmtDate=iso=>{const[y,m,d]=iso.split("-");return `${d}/${m}/${y}`;};
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function stats(name){let t=0,m=0,y=0,tot=0;
+  state.entries.filter(e=>e.vrm===name).forEach(e=>{tot++;
+    if(isSameDay(e.date))t++;if(isSameMonth(e.date))m++;if(isSameYear(e.date))y++;});
+  return{t,m,y,tot};}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+// deterministic avatar color from name
+const AV=['#4f46e5','#0d9488','#d97706','#e11d48','#7c3aed','#0891b2','#c026d3','#059669','#ea580c','#2563eb'];
+function avColor(name){let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);return AV[Math.abs(h)%AV.length];}
+function initials(name){return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+function avatar(name){return `<span class="avatar"><span class="ini" style="background:${avColor(name)}">${esc(initials(name))}</span><span class="vname">${esc(name)}</span></span>`;}
+
+// ══════════════════════  Sidebar / nav  ══════════════════════
+function toggleSide(){const s=document.getElementById("sidebar"),sh=document.getElementById("shell");
+  if(window.innerWidth<=1040){s.classList.toggle("open");}
+  else{s.classList.toggle("collapsed");s.style.transform=s.classList.contains("collapsed")?"translateX(-100%)":"none";sh.classList.toggle("full");}}
+function closeSide(){document.getElementById("sidebar").classList.remove("open");}
+function go(tab,anchor){
+  document.getElementById("panel-dash").classList.toggle("show",tab==="dash");
+  document.getElementById("panel-analysis").classList.toggle("show",tab==="analysis");
+  document.getElementById("nav-dash").classList.toggle("active",tab==="dash"&&!anchor);
+  document.getElementById("nav-mis").classList.toggle("active",tab==="dash"&&anchor==="mis");
+  document.getElementById("nav-analysis").classList.toggle("active",tab==="analysis");
+  document.getElementById("pagetitle").textContent=tab==="analysis"?"Analysis & Input":(anchor==="mis"?"MIS – VRM summary":"Dashboard");
+  document.querySelector(".topbar .ts").textContent=tab==="analysis"?"Manage VRMs, record & import accounts":"Accounts opened by relationship manager";
+  closeSide();
+  if(anchor)setTimeout(()=>document.getElementById(anchor).scrollIntoView({behavior:"smooth",block:"start"}),80);
+  else window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// ══════════════════════  VRM ops  ══════════════════════
+async function addVRM(){
+  const el=document.getElementById("vrm-name");const name=el.value.trim();
+  if(!name){toast("Enter a VRM name.","warn");return;}
+  const r=await callServer('addVRM',name);
+  if(r.error){toast(r.error,"warn");return;}
+  state=r;el.value="";renderAll();toast(`<b>${esc(name)}</b> added.`,"ok");
+}
+function deleteVRM(name){
+  confirmModal("Delete VRM?",`This removes <b>${esc(name)}</b> and all of their account entries. This can't be undone.`,async()=>{
+    const r=await callServer('deleteVRM',name);
+    if(r.error){toast(r.error,"warn");return;}
+    state=r;renderAll();toast(`<b>${esc(name)}</b> deleted.`,"ok");
+  });
+}
+
+// ══════════════════════  Entry ops  ══════════════════════
+async function addEntry(){
+  const sel=document.getElementById("e-vrm");
+  const vrm=sel.value;
+  const date=document.getElementById("e-date").value;
+  if(!vrm){toast("Add and select a VRM first.","warn");return;}
+  if(!date){toast("Pick a date.","warn");return;}
+  const codeEl=document.getElementById("e-code");
+  const raw=codeEl.value.split(/[,\n;]+/).map(s=>s.trim()).filter(Boolean);
+  if(!raw.length){toast("Enter at least one client code.","warn");return;}
+  // snapshot which entered codes already belong to a VRM (before the write)
+  const conflicts=[];const cseen=new Set();
+  raw.forEach(c=>{const lc=c.toLowerCase();if(cseen.has(lc))return;cseen.add(lc);const h=findCode(c);if(h)conflicts.push({code:c,hit:h});});
+  const r=await callServer('addEntries',vrm,date,raw);
+  if(r.error){toast(r.error,"warn");return;}
+  state=r;codeEl.value="";renderAll();
+  const msg=`<b>${r.added}</b> code${r.added!==1?'s':''} added${r.skipped?` · ${r.skipped} skipped (duplicate)`:''}.`;
+  toast(msg,r.added?"ok":"warn");
+  if(r.skipped&&conflicts.length)showConflicts(conflicts,`${conflicts.length} code${conflicts.length!==1?'s':''} already recorded — see owners below`);
+}
+function deleteEntry(id){
+  confirmModal("Delete entry?","Remove this client code activation record?",async()=>{
+    const r=await callServer('deleteEntry',id);
+    if(r.error){toast(r.error,"warn");return;}
+    state=r;renderAll();toast("Entry deleted.","ok");
+  });
+  // make the modal button say "Delete" (already does)
+}
+
+// ══════════════════════  Import  ══════════════════════
+function normDate(val){
+  if(val instanceof Date&&!isNaN(val))return val.toISOString().slice(0,10);
+  const s=String(val).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
+  const m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){let[_,d,mo,y]=m;if(y.length===2)y="20"+y;return `${y}-${mo.padStart(2,"0")}-${d.padStart(2,"0")}`;}
+  const dt=new Date(s);if(!isNaN(dt))return dt.toISOString().slice(0,10);
+  return null;
+}
+function pickKey(keys,pats){for(const k of keys)for(const p of pats)if(p.test(k))return k;return null;}
+
+async function importFile(ev){
+  const file=ev.target.files[0];if(!file)return;
+  if(typeof XLSX==="undefined"){toast("Spreadsheet reader didn't load — check your connection.","err");ev.target.value="";return;}
+  const selVrm=document.getElementById("e-vrm").value;
+  const selDate=document.getElementById("e-date").value;
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:"array",cellDates:true});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:"",raw:false});
+    if(!rows.length){toast("That file looks empty.","warn");ev.target.value="";return;}
+
+    let out=[];
+    if(typeof rows[0]==="object"&&!Array.isArray(rows[0])){
+      const keys=Object.keys(rows[0]);
+      const codeKey=pickKey(keys,[/client\s*code/i,/^code$/i,/client/i,/account/i]);
+      const vrmKey =pickKey(keys,[/vrm/i,/relationship/i,/\brm\b/i,/manager/i]);
+      const dateKey=pickKey(keys,[/date/i]);
+      if(codeKey){
+        rows.forEach(r=>{
+          const code=String(r[codeKey]||"").trim();if(!code)return;
+          let vrm=selVrm,date=selDate;
+          if(vrmKey&&String(r[vrmKey]).trim())vrm=String(r[vrmKey]).trim();
+          if(dateKey&&String(r[dateKey]).trim()){const d=normDate(r[dateKey]);if(d)date=d;}
+          if(vrm&&date)out.push({vrm,date,clientCode:code});
+        });
+      }else{
+        if(!selVrm){toast("Select a VRM above before importing a plain code list.","warn");ev.target.value="";return;}
+        if(!selDate){toast("Pick a date above before importing a plain code list.","warn");ev.target.value="";return;}
+        rows.forEach(r=>Object.values(r).forEach(v=>{const c=String(v).trim();if(c)out.push({vrm:selVrm,date:selDate,clientCode:c});}));
+      }
+    }
+    if(!out.length){toast("No usable rows found in that file.","warn");ev.target.value="";return;}
+
+    // snapshot codes in the file that already belong to a VRM (before the write)
+    const conflicts=[];const iseen=new Set();
+    out.forEach(o=>{const lc=o.clientCode.toLowerCase();if(iseen.has(lc))return;iseen.add(lc);const h=findCode(o.clientCode);if(h)conflicts.push({code:o.clientCode,hit:h});});
+
+    const r=await callServer('importRows',out);
+    if(r.error){toast(r.error,"warn");ev.target.value="";return;}
+    state=r;renderAll();
+    if(r.skipped&&conflicts.length)showConflicts(conflicts,`${conflicts.length} imported code${conflicts.length!==1?'s':''} already existed — see owners below`);
+    let msg=`Imported <b>${r.imported}</b> code${r.imported!==1?'s':''}`;
+    if(r.newVrms)msg+=` · ${r.newVrms} new VRM${r.newVrms!==1?'s':''}`;
+    if(r.skipped)msg+=` · ${r.skipped} skipped`;
+    toast(msg+'.',r.imported?"ok":"warn",5200);
+  }catch(err){console.error(err);toast("Couldn't read that file — is it a valid CSV/Excel?","err");}
+  ev.target.value="";
+}
+
+// ══════════════════════  Client-code lookup  ══════════════════════
+function findCode(code){
+  const lc=String(code||'').trim().toLowerCase();
+  if(!lc)return null;
+  return state.entries.find(e=>(e.clientCode||'').toLowerCase()===lc)||null;
+}
+function parseCodes(str){return String(str||'').split(/[,\n;]+/).map(s=>s.trim()).filter(Boolean);}
+const ICON_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+const ICON_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+function conflictRow(code,hit){
+  return `<div class="lk-row"><span class="code-pill">${esc(code)}</span><span class="who">${avatar(hit.vrm)}<span class="d"> · ${fmtDate(hit.date)}</span></span><span class="st taken">Taken</span></div>`;
+}
+function availRow(code){
+  return `<div class="lk-row"><span class="code-pill">${esc(code)}</span><span class="st avail" style="margin-left:auto">Available</span></div>`;
+}
+
+function renderAudit(codes){
+  const box=document.getElementById('lk-result');
+  const uniq=[];const seen=new Set();
+  codes.forEach(c=>{const lc=c.toLowerCase();if(!seen.has(lc)){seen.add(lc);uniq.push(c);}});
+  if(!uniq.length){box.innerHTML=`<div class="lk-box"><div class="lks">Enter at least one client code to look up.</div></div>`;return;}
+
+  if(uniq.length===1){
+    const c=uniq[0],hit=findCode(c);
+    box.innerHTML=hit
+      ?`<div class="lk-box hit"><div class="lki">${ICON_WARN}</div><div><div class="lkt">${esc(c)} is already activated</div><div class="lks">Owned by <b>${esc(hit.vrm)}</b> · recorded ${fmtDate(hit.date)}</div></div></div>`
+      :`<div class="lk-box free"><div class="lki">${ICON_CHECK}</div><div><div class="lkt">${esc(c)} is available</div><div class="lks">Not yet recorded by any VRM.</div></div></div>`;
+    return;
+  }
+
+  const items=uniq.map(c=>({code:c,hit:findCode(c)}));
+  const taken=items.filter(i=>i.hit).length;
+  items.sort((a,b)=>(b.hit?1:0)-(a.hit?1:0));
+  const rows=items.map(i=>i.hit?conflictRow(i.code,i.hit):availRow(i.code)).join("");
+  box.innerHTML=`<div class="lk-summary"><span class="taken">${taken} already taken</span><span class="avail">${uniq.length-taken} available</span><span style="color:var(--muted)">of ${uniq.length} unique code${uniq.length!==1?'s':''}</span></div><div class="lk-list">${rows}</div>`;
+}
+
+function lookupCode(){
+  const codes=parseCodes(document.getElementById('lk-code').value);
+  if(!codes.length){toast('Enter a client code to look up.','warn');return;}
+  renderAudit(codes);
+}
+function checkBoxCodes(){
+  const codes=parseCodes(document.getElementById('e-code').value);
+  if(!codes.length){toast('The "Record accounts opened" box is empty.','warn');return;}
+  document.getElementById('lk-code').value=codes.join(', ');
+  renderAudit(codes);
+  document.getElementById('lk-result').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+// Show which VRM owns each skipped duplicate after an add/import.
+function showConflicts(conflicts,headline){
+  if(!conflicts.length)return;
+  const cap=conflicts.slice(0,200);
+  const rows=cap.map(i=>conflictRow(i.code,i.hit)).join("");
+  const more=conflicts.length>cap.length?` <span style="color:var(--muted)">(+${conflicts.length-cap.length} more)</span>`:"";
+  document.getElementById('lk-result').innerHTML=`<div class="lk-summary"><span class="taken">${headline}${more}</span></div><div class="lk-list">${rows}</div>`;
+  document.getElementById('lk-code').value=cap.map(i=>i.code).join(', ');
+}
+
+// ══════════════════════  Renderers  ══════════════════════
+function renderDashboard(){
+  let tT=0,tM=0,tY=0;
+  const rows=state.vrms.map(v=>{const s=stats(v.name);tT+=s.t;tM+=s.m;tY+=s.y;return{name:v.name,...s};}).sort((a,b)=>b.m-a.m||b.tot-a.tot);
+  document.getElementById("c-today").textContent=tT;
+  document.getElementById("c-month").textContent=tM;
+  document.getElementById("c-year").textContent=tY;
+  document.getElementById("c-vrm").textContent=state.vrms.length;
+  document.getElementById("cap-month").textContent=MONTHS[new Date().getMonth()]+" "+new Date().getFullYear();
+  document.getElementById("cap-year").textContent="Calendar year "+new Date().getFullYear();
+  document.getElementById("mis-count").textContent=state.vrms.length+" VRM"+(state.vrms.length!==1?"s":"");
+
+  const body=document.getElementById("dash-body"),foot=document.getElementById("dash-foot");
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="6"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>No VRMs yet — add one from Analysis &amp; Input.</p></div></td></tr>`;
+    foot.innerHTML="";
+  }else{
+    body.innerHTML=rows.map((r,i)=>{
+      const pct=tM>0?Math.round(r.m/tM*100):0;
+      const rk=i<3?`<span class="rank r${i+1}">${i+1}</span>`:'';
+      return `<tr><td>${rk}${avatar(r.name)}</td>
+      <td class="num">${r.t}</td><td class="num">${r.m}</td><td class="num">${r.y}</td><td class="num"><b>${r.tot}</b></td>
+      <td class="sharecell"><div class="sharebar"><div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="pct">${pct}%</span></div></td></tr>`;
+    }).join("");
+    const g=rows.reduce((s,r)=>s+r.tot,0);
+    foot.innerHTML=`<tr><td>Team total</td><td class="num">${tT}</td><td class="num">${tM}</td><td class="num">${tY}</td><td class="num">${g}</td><td class="sharecell"></td></tr>`;
+  }
+
+  const sum=document.getElementById("vrm-summary");
+  sum.innerHTML=!state.vrms.length?`<div class="empty" style="grid-column:1/-1"><p>No VRMs yet.</p></div>`:
+    state.vrms.map(v=>{const s=stats(v.name);
+      return `<div class="vcard"><div class="vh"><span class="ini" style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:11.5px;font-weight:800;color:#fff;background:${avColor(v.name)}">${esc(initials(v.name))}</span><span class="vn">${esc(v.name)}</span><span class="vbadge">${s.tot} total</span></div>
+      <div class="vstats"><div class="s"><div class="n">${s.t}</div><div class="l">Today</div></div>
+      <div class="s m"><div class="n">${s.m}</div><div class="l">Month</div></div>
+      <div class="s y"><div class="n">${s.y}</div><div class="l">Year</div></div></div></div>`;}).join("");
+}
+
+function renderVRMList(){
+  const l=document.getElementById("vrm-list");
+  if(!state.vrms.length){l.innerHTML=`<div class="empty"><p>No VRMs added yet.</p></div>`;return;}
+  l.innerHTML=state.vrms.map(v=>{const s=stats(v.name);const nm=esc(v.name).replace(/'/g,"\\'");
+    return `<div class="vitem">${avatar(v.name)}<span style="display:flex;align-items:center;gap:8px"><span class="pill">${s.tot} codes</span>
+    <button class="btn ghost icon" title="Rename" onclick="openRename('${nm}')">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+    <button class="btn danger icon" title="Delete" onclick="deleteVRM('${nm}')">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></span></div>`;}).join("");
+}
+
+function renderSelects(){
+  const sel=document.getElementById("e-vrm"),cur=sel.value;
+  sel.innerHTML=state.vrms.length?state.vrms.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join(""):`<option value="">— add a VRM first —</option>`;
+  if(state.vrms.some(v=>v.name===cur))sel.value=cur;
+  const f=document.getElementById("filter-vrm"),fc=f.value;
+  f.innerHTML=`<option value="">All VRMs</option>`+state.vrms.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join("");
+  f.value=fc;
+}
+
+function renderEntries(){
+  const filter=document.getElementById("filter-vrm").value;
+  const q=(document.getElementById("entry-search")?.value||"").trim().toLowerCase();
+  let list=[...state.entries];
+  if(filter)list=list.filter(e=>e.vrm===filter);
+  if(q)list=list.filter(e=>(e.clientCode||"").toLowerCase().includes(q)||e.vrm.toLowerCase().includes(q)||fmtDate(e.date).includes(q));
+  list.sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+  const body=document.getElementById("entry-body"),foot=document.getElementById("entry-foot");
+  if(!list.length){
+    const msg=(q||filter)?"No entries match your search.":"No entries yet — record accounts on the right.";
+    body.innerHTML=`<tr><td colspan="4"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>${msg}</p></div></td></tr>`;
+    foot.innerHTML="";return;}
+  body.innerHTML=list.map(e=>
+    `<tr><td>${fmtDate(e.date)}</td><td>${avatar(e.vrm)}</td><td><span class="code-pill">${esc(e.clientCode||"—")}</span></td>
+    <td class="num"><button class="btn danger icon" onclick="deleteEntry('${esc(e.id)}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td></tr>`
+  ).join("");
+  foot.innerHTML=`<tr><td colspan="2">Total accounts</td><td class="num">${list.length}</td><td></td></tr>`;
+}
+
+function renderFilter(){
+  const yEl=document.getElementById("f-year"),mEl=document.getElementById("f-month"),vEl=document.getElementById("f-vrm");
+  const years=new Set(state.entries.map(e=>e.date.slice(0,4)));years.add(String(new Date().getFullYear()));
+  const ylist=[...years].sort((a,b)=>b.localeCompare(a));
+  const curY=yEl.value||String(new Date().getFullYear());
+  yEl.innerHTML=ylist.map(y=>`<option value="${y}">${y}</option>`).join("");
+  yEl.value=ylist.includes(curY)?curY:ylist[0];
+  const curV=vEl.value;
+  vEl.innerHTML=`<option value="">Whole team</option>`+state.vrms.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join("");
+  if(state.vrms.some(v=>v.name===curV))vEl.value=curV;
+
+  const year=yEl.value,month=mEl.value,vrm=vEl.value;
+  const from=document.getElementById("f-from").value,to=document.getElementById("f-to").value;
+  const rangeOn=!!(from||to);
+  yEl.disabled=rangeOn;mEl.disabled=rangeOn;
+
+  let sel,periodLabel;
+  if(rangeOn){
+    const lo=from||"0000-01-01",hi=to||"9999-12-31";
+    sel=state.entries.filter(e=>e.date>=lo&&e.date<=hi&&(!vrm||e.vrm===vrm));
+    periodLabel=from&&to?`${fmtDate(from)} → ${fmtDate(to)}`:from?`from ${fmtDate(from)}`:`up to ${fmtDate(to)}`;
+  }else{
+    sel=state.entries.filter(e=>e.date.slice(0,4)===year&&(!month||e.date.slice(5,7)===month)&&(!vrm||e.vrm===vrm));
+    periodLabel=(month?mEl.options[mEl.selectedIndex].text:"whole year")+" "+year;
+  }
+  const scope=vrm||"whole team";
+  currentFilter={rangeOn,from,to,year,month,periodLabel,vrm,scope,sel};
+
+  let html=`<div class="fbig"><span class="n">${sel.length}</span><span class="cap">account${sel.length!==1?'s':''} opened — <b style="color:var(--ink-2)">${esc(scope)}</b>, ${esc(periodLabel)}</span></div>`;
+  if(!vrm&&state.vrms.length){
+    const per=state.vrms.map(v=>({name:v.name,count:sel.filter(e=>e.vrm===v.name).length})).sort((a,b)=>b.count-a.count);
+    const max=Math.max(1,...per.map(p=>p.count));
+    html+=`<div class="fbars">`+per.map(p=>
+      `<div class="fbar"><span class="fn"><span class="ini" style="width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:9.5px;font-weight:800;color:#fff;background:${avColor(p.name)}">${esc(initials(p.name))}</span>${esc(p.name)}</span><span class="ftrack"><span class="ffill" style="width:${Math.round(p.count/max*100)}%"></span></span><span class="fv">${p.count}</span></div>`
+    ).join("")+`</div>`;
+  }
+  document.getElementById("filter-result").innerHTML=html;
+}
+
+function clearRange(){document.getElementById("f-from").value="";document.getElementById("f-to").value="";renderFilter();}
+
+// ══════════════════════  Monthly trend chart  ══════════════════════
+function renderTrend(){
+  const yEl=document.getElementById("t-year"),vEl=document.getElementById("t-vrm");
+  const years=new Set(state.entries.map(e=>e.date.slice(0,4)));years.add(String(new Date().getFullYear()));
+  const ylist=[...years].sort((a,b)=>b.localeCompare(a));
+  const curY=yEl.value||String(new Date().getFullYear());
+  yEl.innerHTML=ylist.map(y=>`<option value="${y}">${y}</option>`).join("");
+  yEl.value=ylist.includes(curY)?curY:ylist[0];
+  const curV=vEl.value;
+  vEl.innerHTML=`<option value="">Whole team</option>`+state.vrms.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join("");
+  if(state.vrms.some(v=>v.name===curV))vEl.value=curV;
+
+  const year=yEl.value,vrm=vEl.value;
+  const monthly=new Array(12).fill(0);
+  state.entries.forEach(e=>{
+    if(e.date.slice(0,4)!==year)return;
+    if(vrm&&e.vrm!==vrm)return;
+    const mi=parseInt(e.date.slice(5,7),10)-1;
+    if(mi>=0&&mi<12)monthly[mi]++;
+  });
+
+  const wrap=document.getElementById("trend-wrap");
+  const total=monthly.reduce((a,b)=>a+b,0);
+  if(total===0){wrap.innerHTML=`<div class="chart-empty">No accounts recorded for ${esc(vrm||"the team")} in ${year}.</div>`;return;}
+
+  const W=720,H=248,padL=34,padR=12,padT=18,padB=26;
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const maxV=Math.max(...monthly);
+  const niceMax=maxV<=5?5:Math.ceil(maxV/5)*5;
+  const band=plotW/12,barW=Math.min(30,band*0.56);
+  const yFor=v=>padT+plotH-(v/niceMax)*plotH;
+  const xMid=i=>padL+band*i+band/2;
+
+  // gridlines + y labels (0, 1/4, 1/2, 3/4, max)
+  let grid="";
+  for(let g=0;g<=4;g++){
+    const val=Math.round(niceMax*g/4);
+    const y=yFor(val);
+    grid+=`<line class="grid" x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"/>`;
+    grid+=`<text class="axis" x="${padL-8}" y="${y+3.5}" text-anchor="end">${val}</text>`;
+  }
+  // bars + value labels + month labels
+  const MSHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  let bars="",labels="",vals="";
+  monthly.forEach((v,i)=>{
+    const x=xMid(i)-barW/2,y=yFor(v),h=padT+plotH-y;
+    bars+=`<rect class="bar" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="4"><title>${MSHORT[i]} ${year}: ${v} account${v!==1?'s':''}</title></rect>`;
+    if(v>0)vals+=`<text class="barval" x="${xMid(i).toFixed(1)}" y="${(y-6).toFixed(1)}">${v}</text>`;
+    labels+=`<text class="axis" x="${xMid(i).toFixed(1)}" y="${H-8}" text-anchor="middle">${MSHORT[i]}</text>`;
+  });
+  // trend line through bar tops
+  const pts=monthly.map((v,i)=>`${xMid(i).toFixed(1)},${yFor(v).toFixed(1)}`).join(" ");
+  const dots=monthly.map((v,i)=>`<circle class="dot" cx="${xMid(i).toFixed(1)}" cy="${yFor(v).toFixed(1)}" r="3.2"/>`).join("");
+
+  wrap.innerHTML=`<svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Monthly accounts for ${esc(vrm||'team')} ${year}">
+    <defs><linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="var(--brand-2)"/><stop offset="100%" stop-color="var(--brand)"/>
+    </linearGradient></defs>
+    ${grid}${bars}<polyline class="trendline" points="${pts}"/>${dots}${vals}${labels}
+  </svg>`;
+}
+
+// ══════════════════════  Export  ══════════════════════
+function exportFiltered(fmt){
+  if(!currentFilter)renderFilter();
+  const f=currentFilter;
+  if(!f||!f.sel.length){toast("Nothing to export for this filter.","warn");return;}
+  if(typeof XLSX==="undefined"){toast("Spreadsheet writer didn't load — check your connection.","err");return;}
+
+  const detail=[...f.sel].sort((a,b)=>a.date.localeCompare(b.date))
+    .map(e=>({VRM:e.vrm,Date:fmtDate(e.date),"Client Code":e.clientCode||""}));
+  const summary=state.vrms.map(v=>({VRM:v.name,"Accounts opened":f.sel.filter(e=>e.vrm===v.name).length}))
+    .sort((a,b)=>b["Accounts opened"]-a["Accounts opened"]);
+  summary.push({VRM:"TOTAL","Accounts opened":f.sel.length});
+
+  const period=f.periodLabel.replace(/[→\/]/g,"-").replace(/\s+/g,"-").replace(/-+/g,"-");
+  const scopeTag=f.vrm?f.scope.replace(/\s+/g,"-"):"team";
+  const base=`VRM-MIS_${scopeTag}_${period}`;
+
+  if(fmt==="csv"){
+    const rows=[["VRM MIS — "+f.scope+", "+f.periodLabel],[],
+      ["Summary"],["VRM","Accounts opened"],...summary.map(r=>[r.VRM,r["Accounts opened"]]),[],
+      ["Detail"],["VRM","Date","Client Code"],...detail.map(r=>[r.VRM,r.Date,r["Client Code"]])];
+    const csv=rows.map(r=>r.map(c=>{const s=String(c??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(",")).join("\n");
+    downloadBlob(new Blob([csv],{type:"text/csv;charset=utf-8;"}),base+".csv");
+  }else{
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),"Summary");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail.length?detail:[{VRM:"",Date:"","Client Code":""}]),"Detail");
+    XLSX.writeFile(wb,base+".xlsx");
+  }
+  toast(`Exported <b>${f.sel.length}</b> record${f.sel.length!==1?'s':''}.`,"ok");
+}
+// Export EVERY entry, all-time — ignores the current filter.
+function exportAll(fmt){
+  if(!state.entries.length){toast("No data to export yet.","warn");return;}
+  if(typeof XLSX==="undefined"){toast("Spreadsheet writer didn't load — check your connection.","err");return;}
+
+  const detail=[...state.entries].sort((a,b)=>a.date.localeCompare(b.date)||a.vrm.localeCompare(b.vrm))
+    .map(e=>({VRM:e.vrm,Date:fmtDate(e.date),"Client Code":e.clientCode||""}));
+  const summary=state.vrms.map(v=>{const s=stats(v.name);
+    return {VRM:v.name,Today:s.t,"This month":s.m,"This year":s.y,"Total (all-time)":s.tot};})
+    .sort((a,b)=>b["Total (all-time)"]-a["Total (all-time)"]);
+  const tot=state.entries.length;
+  summary.push({VRM:"TOTAL",Today:"",  "This month":"", "This year":"", "Total (all-time)":tot});
+
+  const stamp=todayISO().replace(/-/g,"");
+  const base=`VRM-MIS_ALL-DATA_${stamp}`;
+
+  if(fmt==="csv"){
+    const rows=[["VRM MIS — complete data export ("+fmtDate(todayISO())+")"],[],
+      ["Summary — all VRMs"],["VRM","Today","This month","This year","Total (all-time)"],
+      ...summary.map(r=>[r.VRM,r.Today,r["This month"],r["This year"],r["Total (all-time)"]]),[],
+      ["Detail — every entry ("+tot+")"],["VRM","Date","Client Code"],
+      ...detail.map(r=>[r.VRM,r.Date,r["Client Code"]])];
+    const csv=rows.map(r=>r.map(c=>{const s=String(c??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(",")).join("\n");
+    downloadBlob(new Blob([csv],{type:"text/csv;charset=utf-8;"}),base+".csv");
+  }else{
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),"Summary");
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detail),"All entries");
+    XLSX.writeFile(wb,base+".xlsx");
+  }
+  toast(`Exported all <b>${tot}</b> record${tot!==1?'s':''}.`,"ok");
+}
+
+// Download a ready-to-fill import template with the exact expected columns.
+function downloadTemplate(fmt){
+  const today=todayISO();
+  const v1=state.vrms[0]?state.vrms[0].name:"Parth Sharma";
+  const v2=state.vrms[1]?state.vrms[1].name:"Khushi Dodiya";
+  const sample=[
+    {VRM:v1,Date:today,"Client Code":"CL10001"},
+    {VRM:v2,Date:today,"Client Code":"CL10002"}
+  ];
+  const base="VRM-MIS_import-template";
+  if(fmt==="csv"){
+    const rows=[["VRM","Date","Client Code"],...sample.map(r=>[r.VRM,r.Date,r["Client Code"]])];
+    const csv=rows.map(r=>r.map(c=>{const s=String(c??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(",")).join("\n");
+    downloadBlob(new Blob([csv],{type:"text/csv;charset=utf-8;"}),base+".csv");
+  }else{
+    if(typeof XLSX==="undefined"){toast("Spreadsheet writer didn't load — use the CSV template instead.","warn");return;}
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.json_to_sheet(sample,{header:["VRM","Date","Client Code"]});
+    ws["!cols"]=[{wch:22},{wch:14},{wch:16}];
+    XLSX.utils.book_append_sheet(wb,ws,"Import");
+    XLSX.writeFile(wb,base+".xlsx");
+  }
+  toast("Template downloaded — fill in your rows, then import it.","ok");
+}
+
+function downloadBlob(blob,name){
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},100);
+}
+
+// ══════════════════════  Boot  ══════════════════════
+function renderAll(){renderDashboard();renderTrend();renderVRMList();renderSelects();renderEntries();renderFilter();}
+
+function saveApi(){
+  const v=document.getElementById('setup-url').value.trim();
+  if(!/^https:\/\/script\.google\.com\/.*\/exec$/.test(v)){
+    toast("Paste the full Apps Script Web App URL ending in <b>/exec</b>.","warn");return;
+  }
+  try{localStorage.setItem('vrm_api',v);}catch(e){}
+  document.getElementById('setup').classList.remove('show');
+  boot();
+}
+
+async function boot(){
+  const now=new Date();
+  document.getElementById("todayLabel").textContent=now.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  document.getElementById("e-date").value=todayISO();
+  updateThemeIcon();
+  if(!getApiUrl()){ // no backend configured yet → show the connect screen
+    document.getElementById('setup').classList.add('show');
+    const pre=document.getElementById('setup-url'); if(pre){try{pre.value=localStorage.getItem('vrm_api')||"";}catch(e){}}
+    setConn('off');
+    return;
+  }
+  document.getElementById('setup').classList.remove('show');
+  setConn('wait');
+  try{
+    state=await callServer('getData');
+    renderAll();
+    setConn('ok');
+  }catch(e){
+    console.error(e);
+    setConn('off');
+  }
+}
+boot();
+</script>
+</body>
+</html>
