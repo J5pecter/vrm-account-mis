@@ -135,6 +135,16 @@
     .dotlive.off{background:var(--rose);box-shadow:0 0 0 3px var(--rose-soft)}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
     #conn.retry{cursor:pointer;color:var(--rose)}
+    .userchip{display:flex;align-items:center;gap:9px;width:100%;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);
+      border-radius:11px;padding:8px 10px;cursor:pointer;margin-bottom:12px;transition:.15s;text-align:left}
+    .userchip:hover{border-color:var(--line-strong);background:var(--bg-2)}
+    .userchip .uava{width:26px;height:26px;flex:0 0 auto;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;background:var(--grad-brand)}
+    .userchip .uname{flex:1;font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .userchip svg{width:14px;height:14px;color:var(--muted);flex:0 0 auto}
+    .tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--brand-soft);color:var(--brand-ink);white-space:nowrap}
+    .tag.del{background:var(--rose-soft);color:var(--rose)}
+    .tag.imp{background:var(--amber-soft);color:var(--amber)}
+    .tag.ren{background:var(--teal-soft);color:var(--teal)}
 
     /* ─────────────────────────  Shell / topbar  ───────────────────────── */
     .shell{margin-left:var(--side);transition:margin .28s cubic-bezier(.4,0,.2,1);min-height:100vh;display:flex;flex-direction:column}
@@ -453,8 +463,16 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
     Analysis &amp; Input
   </button>
+  <button class="navbtn" id="nav-logs" onclick="go('logs')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+    Activity log
+  </button>
 
   <div class="side-foot">
+    <button class="userchip" id="userchip" onclick="openIdentity()" title="Set your name (used in the activity log)">
+      <span class="uava" id="user-ava">?</span><span class="uname" id="user-name">Set your name</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    </button>
     <div class="live" id="conn"><span class="dotlive wait" id="conn-dot"></span> <span id="conn-text">Connecting…</span></div>
   </div>
 </aside>
@@ -664,6 +682,23 @@
         </div>
       </div>
     </section>
+
+    <!-- ══════════════ ACTIVITY LOG ══════════════ -->
+    <section id="panel-logs" class="panel">
+      <div class="sec"><h2>Activity log</h2><span class="line"></span>
+        <button class="btn ghost mini" onclick="renderLogs()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh</button>
+      </div>
+      <p class="hint" style="margin:-6px 0 14px">Every change is recorded with who made it (self-reported name), their IP (best-effort), when, and what — including which VRM bulk codes were assigned to.</p>
+      <div class="card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>When</th><th>By</th><th>IP</th><th>Action</th><th>VRM</th><th>Details</th></tr></thead>
+            <tbody id="logs-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -678,6 +713,21 @@
     <div class="acts">
       <button class="btn ghost" onclick="closeRename()">Cancel</button>
       <button class="btn" id="rename-ok">Save name</button>
+    </div>
+  </div>
+</div>
+
+<!-- Identity modal -->
+<div class="modal-bg" id="id-modal">
+  <div class="modal">
+    <div class="mi edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <h3>Who's making changes?</h3>
+    <p>Your name is saved on this device and attached to every change in the activity log, so the team can see who did what.</p>
+    <div class="field"><label for="id-input">Your name</label>
+      <input id="id-input" placeholder="e.g. Lavina Saldanha" onkeydown="if(event.key==='Enter')document.getElementById('id-ok').click()"></div>
+    <div class="acts">
+      <button class="btn ghost" onclick="closeId()">Later</button>
+      <button class="btn" id="id-ok">Save</button>
     </div>
   </div>
 </div>
@@ -702,6 +752,12 @@
 // Option B: leave it blank and paste the URL once in the on-screen setup box (saved per browser).
 const API_URL_HARDCODED = "https://script.google.com/macros/s/AKfycbzu2grUu1kIMsJXlcaSUiCvPBe1JbqypJWuxqoWh7oWt5_JVFao_L9Mo-taVgZqT1VLJw/exec";
 const API_TOKEN         = "d5c09942bbb723bae917476016044f56f8785f2072c6ac8a";   // must equal TOKEN in backend/Code.gs
+
+// Identity for the audit log — self-reported name (saved per browser) + best-effort IP.
+let USER_NAME = "";
+let USER_IP   = "";
+try{ USER_NAME = localStorage.getItem('vrm_user') || ""; }catch(e){}
+async function fetchIP(){ try{ const r=await fetch('https://api.ipify.org?format=json'); const j=await r.json(); USER_IP=j.ip||""; }catch(e){} }
 
 function getApiUrl(){
   if(API_URL_HARDCODED) return API_URL_HARDCODED;
@@ -728,14 +784,18 @@ function buildPayload(fn,args){
 async function callServer(fn, ...args){
   const url=getApiUrl();
   if(!url) throw new Error('Backend URL not set');
+  const sep=url.indexOf('?')>-1?'&':'?';
+  const tok=API_TOKEN?'&token='+encodeURIComponent(API_TOKEN):'';
   showLoader();
   try{
     let res;
     if(fn==='getData'){
-      const u=url+(url.indexOf('?')>-1?'&':'?')+'action=getData'+(API_TOKEN?'&token='+encodeURIComponent(API_TOKEN):'');
-      res=await fetch(u,{method:'GET'});
+      res=await fetch(url+sep+'action=getData'+tok,{method:'GET'});
+    }else if(fn==='getLogs'){
+      res=await fetch(url+sep+'action=getLogs&limit='+(args[0]||300)+tok,{method:'GET'});
     }else{
       const payload=buildPayload(fn,args); if(API_TOKEN)payload.token=API_TOKEN;
+      payload.by=USER_NAME||''; payload.ip=USER_IP||'';   // who/IP for the audit log
       // send as text/plain (default for a string body) so the browser skips the CORS preflight
       res=await fetch(url,{method:'POST',body:JSON.stringify(payload)});
     }
@@ -786,6 +846,43 @@ function setConn(status){ // 'wait' | 'ok' | 'off'
   wrap.classList.toggle('retry',status==='off');
   txt.textContent=status==='ok'?'Synced to Google Sheets':status==='off'?'Offline — click to retry':'Connecting…';
   wrap.onclick=status==='off'?boot:null;
+}
+
+// ══════════════════════  Identity (for the audit log)  ══════════════════════
+function updateUserChip(){
+  const av=document.getElementById('user-ava'),nm=document.getElementById('user-name');
+  if(!nm)return;
+  if(USER_NAME){nm.textContent=USER_NAME;av.textContent=initials(USER_NAME);}
+  else{nm.textContent="Set your name";av.textContent="?";}
+}
+function openIdentity(){const i=document.getElementById('id-input');i.value=USER_NAME||'';document.getElementById('id-modal').classList.add('show');setTimeout(()=>{i.focus();i.select();},60);}
+function closeId(){document.getElementById('id-modal').classList.remove('show');}
+document.getElementById('id-ok').onclick=()=>{
+  const v=document.getElementById('id-input').value.trim();
+  if(!v){toast('Enter your name.','warn');return;}
+  USER_NAME=v;try{localStorage.setItem('vrm_user',v);}catch(e){}
+  closeId();updateUserChip();toast('Saved — your changes will be logged as <b>'+esc(v)+'</b>.','ok');
+};
+
+// ══════════════════════  Activity log  ══════════════════════
+function fmtTime(iso){if(!iso)return '—';const d=new Date(iso);if(isNaN(d))return esc(String(iso));
+  return d.toLocaleString(undefined,{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function actionTag(a){const l=String(a).toLowerCase();let cls='';if(l.indexOf('delete')>-1)cls=' del';else if(l.indexOf('import')>-1)cls=' imp';else if(l.indexOf('rename')>-1)cls=' ren';return `<span class="tag${cls}">${esc(a)}</span>`;}
+async function renderLogs(){
+  const body=document.getElementById('logs-body');
+  body.innerHTML=`<tr><td colspan="6"><div class="empty"><p>Loading activity…</p></div></td></tr>`;
+  let r;try{r=await callServer('getLogs',300);}catch(e){r=null;}
+  if(!r||r.error){body.innerHTML=`<tr><td colspan="6"><div class="empty"><p>Couldn't load the activity log.</p></div></td></tr>`;return;}
+  const logs=r.logs||[];
+  if(!logs.length){body.innerHTML=`<tr><td colspan="6"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg><p>No activity recorded yet — make a change and it'll appear here.</p></div></td></tr>`;return;}
+  body.innerHTML=logs.map(l=>`<tr>
+    <td style="white-space:nowrap">${fmtTime(l.time)}</td>
+    <td>${l.by?avatar(l.by):'<span style="color:var(--muted)">Unknown</span>'}</td>
+    <td><span class="code-pill">${esc(l.ip||'—')}</span></td>
+    <td>${actionTag(l.action||'—')}</td>
+    <td>${l.vrm?esc(l.vrm):'<span style="color:var(--muted)">—</span>'}</td>
+    <td style="color:var(--ink-2);min-width:220px">${esc(l.detail||'')}</td>
+  </tr>`).join("");
 }
 
 // ══════════════════════  Confirm modal  ══════════════════════
@@ -854,12 +951,15 @@ function closeSide(){document.getElementById("sidebar").classList.remove("open")
 function go(tab,anchor){
   document.getElementById("panel-dash").classList.toggle("show",tab==="dash");
   document.getElementById("panel-analysis").classList.toggle("show",tab==="analysis");
+  document.getElementById("panel-logs").classList.toggle("show",tab==="logs");
   document.getElementById("nav-dash").classList.toggle("active",tab==="dash"&&!anchor);
   document.getElementById("nav-mis").classList.toggle("active",tab==="dash"&&anchor==="mis");
   document.getElementById("nav-analysis").classList.toggle("active",tab==="analysis");
-  document.getElementById("pagetitle").textContent=tab==="analysis"?"Analysis & Input":(anchor==="mis"?"MIS – VRM summary":"Dashboard");
-  document.querySelector(".topbar .ts").textContent=tab==="analysis"?"Manage VRMs, record & import accounts":"Accounts opened by relationship manager";
+  document.getElementById("nav-logs").classList.toggle("active",tab==="logs");
+  document.getElementById("pagetitle").textContent=tab==="analysis"?"Analysis & Input":tab==="logs"?"Activity log":(anchor==="mis"?"MIS – VRM summary":"Dashboard");
+  document.querySelector(".topbar .ts").textContent=tab==="analysis"?"Manage VRMs, record & import accounts":tab==="logs"?"Who changed what, and when":"Accounts opened by relationship manager";
   closeSide();
+  if(tab==="logs")renderLogs();
   if(anchor)setTimeout(()=>document.getElementById(anchor).scrollIntoView({behavior:"smooth",block:"start"}),80);
   else window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -1336,6 +1436,8 @@ async function boot(){
   document.getElementById("todayLabel").textContent=now.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   document.getElementById("e-date").value=todayISO();
   updateThemeIcon();
+  updateUserChip();
+  fetchIP();                                   // best-effort, fire-and-forget
   if(!getApiUrl()){ // no backend configured yet → show the connect screen
     document.getElementById('setup').classList.add('show');
     const pre=document.getElementById('setup-url'); if(pre){try{pre.value=localStorage.getItem('vrm_api')||"";}catch(e){}}
@@ -1348,6 +1450,7 @@ async function boot(){
     state=await callServer('getData');
     renderAll();
     setConn('ok');
+    if(!USER_NAME)openIdentity();              // ask once, so changes are attributed
   }catch(e){
     console.error(e);
     setConn('off');
