@@ -329,8 +329,11 @@
     /* ─────────────────────────  Loader / backdrop  ───────────────────────── */
     .loader{position:fixed;inset:0;z-index:100;display:none;place-items:center;background:color-mix(in srgb,var(--bg) 60%,transparent);backdrop-filter:blur(2px)}
     .loader.show{display:grid}
-    .spinner{width:38px;height:38px;border:3.5px solid var(--line-strong);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
+    /* slim non-blocking top progress bar */
+    .bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:300;pointer-events:none;opacity:0;transition:opacity .25s;overflow:hidden}
+    .bar.show{opacity:1}
+    .bar::before{content:"";position:absolute;top:0;height:100%;width:35%;left:-35%;border-radius:3px;background:linear-gradient(90deg,transparent,var(--brand),var(--brand-2),transparent);animation:indet 1.1s ease-in-out infinite}
+    @keyframes indet{0%{left:-35%}60%{left:100%}100%{left:100%}}
 
     /* first-run setup */
     .setup{position:fixed;inset:0;z-index:180;display:none;place-items:center;padding:22px;background:var(--bg)}
@@ -404,8 +407,8 @@
 </head>
 <body>
 
-<!-- Loader -->
-<div class="loader" id="loader"><div class="spinner"></div></div>
+<!-- Top progress bar (non-blocking) -->
+<div class="bar" id="bar"></div>
 <!-- Toasts -->
 <div class="toasts" id="toasts"></div>
 
@@ -706,8 +709,9 @@ function getApiUrl(){
   if(q){try{localStorage.setItem('vrm_api',q);}catch(e){} return q;}
   try{return localStorage.getItem('vrm_api')||"";}catch(e){return "";}
 }
-function showLoader(){document.getElementById('loader').classList.add('show');}
-function hideLoader(){document.getElementById('loader').classList.remove('show');}
+let _inflight=0;
+function showLoader(){_inflight++;document.getElementById('bar').classList.add('show');}
+function hideLoader(){_inflight=Math.max(0,_inflight-1);if(_inflight===0)document.getElementById('bar').classList.remove('show');}
 
 // map the old callServer(fn, ...args) calls to a JSON payload for the API
 function buildPayload(fn,args){
@@ -742,6 +746,8 @@ async function callServer(fn, ...args){
     throw e;
   }finally{ hideLoader(); }
 }
+// Re-pull authoritative data from the server (used to reconcile after an optimistic update fails)
+async function syncFromServer(){ try{ const r=await callServer('getData'); if(r&&!r.error){ state=r; renderAll(); } }catch(e){} }
 
 // ══════════════════════  Toasts  ══════════════════════
 const ICONS={
@@ -809,9 +815,12 @@ document.getElementById('rename-ok').onclick=async()=>{
   if(!to){toast("Name can't be empty.","warn");return;}
   if(to===from){closeRename();return;}
   closeRename();
+  state.vrms.forEach(v=>{if(v.name===from)v.name=to;});           // optimistic — instant
+  state.entries.forEach(e=>{if(e.vrm===from)e.vrm=to;});
+  renderAll();
   const r=await callServer('renameVRM',from,to);
-  if(r.error){toast(r.error,"warn");return;}
-  state=r;renderAll();toast(`Renamed to <b>${esc(to)}</b>.`,"ok");
+  if(r&&!r.error){state=r;renderAll();toast(`Renamed to <b>${esc(to)}</b>.`,"ok");}
+  else{toast((r&&r.error)||"Rename failed.","warn");syncFromServer();}
 };
 
 // ══════════════════════  State & helpers  ══════════════════════
@@ -859,15 +868,20 @@ function go(tab,anchor){
 async function addVRM(){
   const el=document.getElementById("vrm-name");const name=el.value.trim();
   if(!name){toast("Enter a VRM name.","warn");return;}
+  if(state.vrms.some(v=>v.name.toLowerCase()===name.toLowerCase())){toast("That VRM already exists.","warn");return;}
+  state.vrms.push({name});el.value="";renderAll();                 // optimistic — instant
   const r=await callServer('addVRM',name);
-  if(r.error){toast(r.error,"warn");return;}
-  state=r;el.value="";renderAll();toast(`<b>${esc(name)}</b> added.`,"ok");
+  if(r&&!r.error){state=r;renderAll();toast(`<b>${esc(name)}</b> added.`,"ok");}
+  else{toast((r&&r.error)||"Couldn't add VRM.","warn");syncFromServer();}
 }
 function deleteVRM(name){
   confirmModal("Delete VRM?",`This removes <b>${esc(name)}</b> and all of their account entries. This can't be undone.`,async()=>{
+    state.vrms=state.vrms.filter(v=>v.name!==name);                // optimistic — instant
+    state.entries=state.entries.filter(e=>e.vrm!==name);
+    renderAll();
     const r=await callServer('deleteVRM',name);
-    if(r.error){toast(r.error,"warn");return;}
-    state=r;renderAll();toast(`<b>${esc(name)}</b> deleted.`,"ok");
+    if(r&&!r.error){state=r;renderAll();toast(`<b>${esc(name)}</b> deleted.`,"ok");}
+    else{toast((r&&r.error)||"Delete failed.","warn");syncFromServer();}
   });
 }
 
@@ -884,20 +898,28 @@ async function addEntry(){
   // snapshot which entered codes already belong to a VRM (before the write)
   const conflicts=[];const cseen=new Set();
   raw.forEach(c=>{const lc=c.toLowerCase();if(cseen.has(lc))return;cseen.add(lc);const h=findCode(c);if(h)conflicts.push({code:c,hit:h});});
+  // optimistic — add the codes that are new right away so the UI updates instantly
+  const existing=new Set(state.entries.map(e=>(e.clientCode||'').toLowerCase()));
+  const oseen=new Set();
+  raw.forEach(c=>{const lc=c.toLowerCase();if(oseen.has(lc)||existing.has(lc))return;oseen.add(lc);
+    state.entries.push({id:'tmp'+Math.random().toString(36).slice(2),vrm,date,clientCode:c});});
+  codeEl.value="";renderAll();
   const r=await callServer('addEntries',vrm,date,raw);
-  if(r.error){toast(r.error,"warn");return;}
-  state=r;codeEl.value="";renderAll();
-  const msg=`<b>${r.added}</b> code${r.added!==1?'s':''} added${r.skipped?` · ${r.skipped} skipped (duplicate)`:''}.`;
-  toast(msg,r.added?"ok":"warn");
-  if(r.skipped&&conflicts.length)showConflicts(conflicts,`${conflicts.length} code${conflicts.length!==1?'s':''} already recorded — see owners below`);
+  if(r&&!r.error){
+    state=r;renderAll();
+    const added=r.added||0,skipped=r.skipped||0;
+    toast(`<b>${added}</b> code${added!==1?'s':''} added${skipped?` · ${skipped} skipped (duplicate)`:''}.`,added?"ok":"warn");
+    if(skipped&&conflicts.length)showConflicts(conflicts,`${conflicts.length} code${conflicts.length!==1?'s':''} already recorded — see owners below`);
+  }else{toast((r&&r.error)||"Couldn't add codes.","warn");syncFromServer();}
 }
 function deleteEntry(id){
   confirmModal("Delete entry?","Remove this client code activation record?",async()=>{
+    state.entries=state.entries.filter(e=>e.id!==id);              // optimistic — instant
+    renderAll();
     const r=await callServer('deleteEntry',id);
-    if(r.error){toast(r.error,"warn");return;}
-    state=r;renderAll();toast("Entry deleted.","ok");
+    if(r&&!r.error){state=r;renderAll();toast("Entry deleted.","ok");}
+    else{toast((r&&r.error)||"Delete failed.","warn");syncFromServer();}
   });
-  // make the modal button say "Delete" (already does)
 }
 
 // ══════════════════════  Import  ══════════════════════
