@@ -8,75 +8,82 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,600;125,700;125,800;125,900&family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* ─────────────────────────  Design tokens  ─────────────────────────
-       Palette: "Aurora" — a graded violet-indigo primary with a jade
-       secondary, on warm-neutral paper (light) and deep desaturated
-       indigo-navy (dark). Semantic hues tuned to sit together.        */
+       Palette: "Fabric" — editorial off-white paper with faint gridlines,
+       near-black ink, and a single warm orange accent (#F37021). Extended
+       display type + Inter Tight body, inspired by fabric.vc.            */
     :root{
-      /* neutral surface ramp — subtly warm so white surfaces feel premium */
-      --bg:#f3f4f8; --bg-2:#e9ebf2;
-      --surface:#ffffff; --surface-2:#f8f9fc;
-      --line:#e6e8f0; --line-strong:#d4d8e4;
+      /* cool off-white paper + neutral hairlines */
+      --bg:#f5f7fa; --bg-2:#eceef2;
+      --surface:#ffffff; --surface-2:#f7f8fb;
+      --line:#e4e6ea; --line-strong:#d0d3d9;
 
-      /* ink ramp — near-black with a cool undertone */
-      --ink:#14162a; --ink-2:#404560; --muted:#7f8699; --muted-2:#a7adbf;
+      /* near-black editorial ink, neutral greys */
+      --ink:#1a1a1a; --ink-2:#313131; --muted:#6f7379; --muted-2:#9a9ea5;
 
-      /* brand — electric indigo-violet */
-      --brand:#5b52f0; --brand-2:#7c74f7; --brand-soft:#ecebfe; --brand-ink:#4038c7;
-      /* secondary / positive — jade */
-      --teal:#0ea885; --teal-soft:#e2f6f0;
-      --amber:#e0891b; --amber-soft:#fcefdb;
-      --rose:#e5484d; --rose-soft:#fce9ea;
-      --ok:#2fa363; --ok-soft:#e6f6ec;
+      /* brand — Fabric orange */
+      --brand:#f37021; --brand-2:#ff8944; --brand-soft:#fdeadd; --brand-ink:#c1500f;
+      /* supporting semantic hues, warmed to sit beside the orange */
+      --teal:#0f9e86; --teal-soft:#e3f5f1;
+      --amber:#c9770f; --amber-soft:#f7ecda;
+      --rose:#d83a3f; --rose-soft:#fbe9ea;
+      --ok:#2f9e5f; --ok-soft:#e6f4ec;
 
-      --grad-brand:linear-gradient(135deg,#6d64f5,#5b52f0 55%,#4f46e5);
-      --grad-bar:linear-gradient(180deg,#7c74f7,#5b52f0);
+      --grad-brand:linear-gradient(135deg,#ff8a44,#f37021 60%,#e15f10);
+      --grad-bar:linear-gradient(180deg,#ff8944,#f37021);
 
-      --radius:16px; --radius-sm:11px; --radius-xs:8px;
-      --shadow-sm:0 1px 2px rgba(20,22,42,.05), 0 1px 3px rgba(20,22,42,.04);
-      --shadow:0 4px 14px rgba(20,22,42,.07), 0 14px 34px rgba(20,22,42,.06);
-      --shadow-lg:0 14px 30px rgba(20,22,42,.14), 0 28px 64px rgba(20,22,42,.14);
-      --ring:0 0 0 3px rgba(91,82,240,.18);
+      /* faint editorial gridlines for the page background */
+      --grid:rgba(160,162,166,.16);
+
+      --font-display:'Archivo','Arial Narrow',Impact,sans-serif;
+
+      --radius:14px; --radius-sm:10px; --radius-xs:7px;
+      --shadow-sm:0 1px 2px rgba(20,20,20,.05), 0 1px 3px rgba(20,20,20,.04);
+      --shadow:0 4px 14px rgba(20,20,20,.06), 0 14px 34px rgba(20,20,20,.05);
+      --shadow-lg:0 14px 30px rgba(20,20,20,.12), 0 28px 64px rgba(20,20,20,.12);
+      --ring:0 0 0 3px rgba(243,112,33,.20);
       --side:264px;
     }
 
     /* dark tokens — applied via system preference OR explicit data-theme="dark" */
     :root[data-theme="dark"]{
-      --bg:#0b0e17; --bg-2:#10131f;
-      --surface:#161a28; --surface-2:#11141f;
-      --line:#232838; --line-strong:#323a51;
-      --ink:#eef0f7; --ink-2:#c3c8d8; --muted:#8b92a6; --muted-2:#646c82;
-      --brand:#8f88ff; --brand-2:#aba4ff; --brand-soft:#211f45; --brand-ink:#cbc6ff;
+      --bg:#131210; --bg-2:#191714;
+      --surface:#201d19; --surface-2:#191613;
+      --line:#312d28; --line-strong:#423c34;
+      --ink:#f4f1ec; --ink-2:#cdc7bf; --muted:#948d83; --muted-2:#6b655d;
+      --brand:#ff8a44; --brand-2:#ffa062; --brand-soft:#3a2415; --brand-ink:#ffb98a;
       --teal:#2dd4aa; --teal-soft:#0e2f29;
       --amber:#f5b445; --amber-soft:#3a2c12;
       --rose:#ff6b70; --rose-soft:#3a1a1d;
       --ok:#4cc98a; --ok-soft:#12311f;
-      --grad-brand:linear-gradient(135deg,#9a93ff,#8f88ff 55%,#7c74f7);
-      --grad-bar:linear-gradient(180deg,#aba4ff,#8f88ff);
-      --shadow-sm:0 1px 2px rgba(0,0,0,.34);
-      --shadow:0 6px 22px rgba(0,0,0,.4);
-      --shadow-lg:0 18px 48px rgba(0,0,0,.55);
-      --ring:0 0 0 3px rgba(143,136,255,.3);
+      --grad-brand:linear-gradient(135deg,#ffa062,#ff8a44 60%,#f37021);
+      --grad-bar:linear-gradient(180deg,#ffa062,#ff8a44);
+      --grid:rgba(255,255,255,.05);
+      --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+      --shadow:0 6px 22px rgba(0,0,0,.46);
+      --shadow-lg:0 18px 48px rgba(0,0,0,.6);
+      --ring:0 0 0 3px rgba(255,138,68,.30);
     }
     @media (prefers-color-scheme: dark){
       :root:not([data-theme="light"]){
-        --bg:#0b0e17; --bg-2:#10131f;
-        --surface:#161a28; --surface-2:#11141f;
-        --line:#232838; --line-strong:#323a51;
-        --ink:#eef0f7; --ink-2:#c3c8d8; --muted:#8b92a6; --muted-2:#646c82;
-        --brand:#8f88ff; --brand-2:#aba4ff; --brand-soft:#211f45; --brand-ink:#cbc6ff;
+        --bg:#131210; --bg-2:#191714;
+        --surface:#201d19; --surface-2:#191613;
+        --line:#312d28; --line-strong:#423c34;
+        --ink:#f4f1ec; --ink-2:#cdc7bf; --muted:#948d83; --muted-2:#6b655d;
+        --brand:#ff8a44; --brand-2:#ffa062; --brand-soft:#3a2415; --brand-ink:#ffb98a;
         --teal:#2dd4aa; --teal-soft:#0e2f29;
         --amber:#f5b445; --amber-soft:#3a2c12;
         --rose:#ff6b70; --rose-soft:#3a1a1d;
         --ok:#4cc98a; --ok-soft:#12311f;
-        --grad-brand:linear-gradient(135deg,#9a93ff,#8f88ff 55%,#7c74f7);
-        --grad-bar:linear-gradient(180deg,#aba4ff,#8f88ff);
-        --shadow-sm:0 1px 2px rgba(0,0,0,.34);
-        --shadow:0 6px 22px rgba(0,0,0,.4);
-        --shadow-lg:0 18px 48px rgba(0,0,0,.55);
-        --ring:0 0 0 3px rgba(143,136,255,.3);
+        --grad-brand:linear-gradient(135deg,#ffa062,#ff8a44 60%,#f37021);
+        --grad-bar:linear-gradient(180deg,#ffa062,#ff8a44);
+        --grid:rgba(255,255,255,.05);
+        --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+        --shadow:0 6px 22px rgba(0,0,0,.46);
+        --shadow-lg:0 18px 48px rgba(0,0,0,.6);
+        --ring:0 0 0 3px rgba(255,138,68,.30);
       }
     }
     /* smooth theme cross-fade on the elements that change surface/ink */
@@ -89,8 +96,11 @@
     html,body{height:100%}
     body{
       margin:0; background:var(--bg); color:var(--ink);
-      font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      font-family:"Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
       -webkit-font-smoothing:antialiased; font-size:14px; line-height:1.5;
+      /* faint editorial gridlines, fabric.vc style */
+      background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+      background-size:280px 280px; background-position:-1px -1px;
     }
     ::selection{background:var(--brand-soft);color:var(--brand-ink)}
     button{font-family:inherit}
@@ -110,10 +120,10 @@
     .brand .logo{
       width:42px;height:42px;border-radius:12px;flex:0 0 auto;
       background:linear-gradient(135deg,var(--brand),var(--brand-2));
-      display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(79,70,229,.35);
+      display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(243,112,33,.35);
     }
     .brand .logo svg{width:22px;height:22px}
-    .brand .bt{font-weight:800;font-size:15.5px;letter-spacing:-.02em;line-height:1.15}
+    .brand .bt{font-family:var(--font-display);font-weight:800;font-size:14.5px;letter-spacing:.02em;line-height:1.05;text-transform:uppercase;font-stretch:125%}
     .brand .bs{font-size:11px;color:var(--muted);font-weight:500}
 
     .navgroup{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted-2);padding:16px 12px 8px}
@@ -166,7 +176,7 @@
     .theme-btn .ic-moon{opacity:1;transform:none}
     .theme-btn.is-dark .ic-sun{opacity:1;transform:none;color:var(--amber)}
     .theme-btn.is-dark .ic-moon{opacity:0;transform:rotate(90deg) scale(.5)}
-    .topbar .tt{font-size:19px;font-weight:800;letter-spacing:-.03em;margin:0;line-height:1.1}
+    .topbar .tt{font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:.01em;margin:0;line-height:1.05;text-transform:uppercase;font-stretch:125%}
     .topbar .ts{font-size:12.5px;color:var(--muted);margin:2px 0 0;font-weight:500}
     .topbar .spacer{flex:1}
     .date-chip{
@@ -180,7 +190,7 @@
     .panel.show{display:block}
     @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
     .sec{display:flex;align-items:center;gap:10px;margin:30px 0 14px}
-    .sec h2{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin:0}
+    .sec h2{font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin:0;font-stretch:125%}
     .sec .line{flex:1;height:1px;background:var(--line)}
     .sec .badge{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg-2);padding:3px 9px;border-radius:20px}
 
@@ -195,7 +205,7 @@
     .kpi .lbl{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.01em}
     .kpi .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center}
     .kpi .ic svg{width:19px;height:19px}
-    .kpi .val{font-size:34px;font-weight:800;letter-spacing:-.035em;font-variant-numeric:tabular-nums;line-height:1}
+    .kpi .val{font-family:var(--font-display);font-size:36px;font-weight:800;letter-spacing:0;font-variant-numeric:tabular-nums;line-height:1;font-stretch:125%}
     .kpi .cap{font-size:11.5px;color:var(--muted-2);margin-top:8px;font-weight:500}
     .kpi.i-today  .ic{background:var(--brand-soft);color:var(--brand)}
     .kpi.i-month  .ic{background:var(--teal-soft);color:var(--teal)}
@@ -209,7 +219,7 @@
     .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
     .card-pad{padding:20px 22px}
     .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line)}
-    .card-head h3{margin:0;font-size:15px;font-weight:750;letter-spacing:-.01em}
+    .card-head h3{margin:0;font-family:var(--font-display);font-size:15px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;font-stretch:125%}
     .card-head .sub{font-size:12px;color:var(--muted);margin-top:2px;font-weight:500}
 
     .table-scroll{overflow-x:auto}
@@ -260,10 +270,10 @@
       display:inline-flex;align-items:center;justify-content:center;gap:8px;
       border:0;background:var(--brand);color:#fff;font-weight:650;font-size:14px;
       padding:10px 18px;border-radius:var(--radius-xs);cursor:pointer;transition:.15s;white-space:nowrap;
-      box-shadow:0 4px 12px rgba(79,70,229,.24);
+      box-shadow:0 4px 12px rgba(243,112,33,.26);
     }
     .btn svg{width:16px;height:16px}
-    .btn:hover{background:var(--brand-2);transform:translateY(-1px);box-shadow:0 6px 16px rgba(79,70,229,.32)}
+    .btn:hover{background:var(--brand-2);transform:translateY(-1px);box-shadow:0 6px 16px rgba(243,112,33,.34)}
     .btn:active{transform:translateY(0)}
     .btn.ghost{background:var(--surface);color:var(--ink-2);border:1px solid var(--line-strong);box-shadow:none}
     .btn.ghost:hover{background:var(--bg-2);color:var(--ink);transform:none}
@@ -310,7 +320,7 @@
     /* filter result */
     .fresult{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
     .fbig{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-    .fbig .n{font-size:40px;font-weight:800;letter-spacing:-.04em;color:var(--brand);font-variant-numeric:tabular-nums;line-height:1}
+    .fbig .n{font-family:var(--font-display);font-size:42px;font-weight:800;letter-spacing:0;color:var(--brand);font-variant-numeric:tabular-nums;line-height:1;font-stretch:125%}
     .fbig .cap{font-size:13px;color:var(--muted);font-weight:500}
     .fbars{margin-top:16px;display:flex;flex-direction:column;gap:2px}
     .fbar{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
