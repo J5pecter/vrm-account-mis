@@ -1695,18 +1695,25 @@ function setLoginRole(role){
 async function showLogin(){
   document.getElementById('login').classList.add('show');
   const sel=document.getElementById('login-name');
+  // The Apps Script backend can take 10s+ on a cold start, so say so rather
+  // than showing an empty box that looks broken.
+  sel.innerHTML='<option value="">Loading names…</option>';
+  sel.disabled=true;
+  let names=[], failed=false;
   try{
     const r=await callServer('getVrms');
-    const names=(r&&r.vrms)||[];
-    sel.innerHTML='<option value="">— Select your name —</option>'
-      + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  }catch(e){
-    sel.innerHTML='<option value="">— Select your name —</option>';
-  }
+    names=(r&&r.vrms)||[];
+    if(!names.length) failed=true;
+  }catch(e){ failed=true; }
+  sel.disabled=false;
+  sel.innerHTML='<option value="">— Select your name —</option>'
+    + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
   // restore the last person who signed in on this browser
   let saved=''; try{saved=localStorage.getItem('vrm_user')||'';}catch(e){}
   if(saved==='Admin'){ setLoginRole('admin'); }
   else { setLoginRole('member'); if(saved) sel.value=saved; }
+  // after setLoginRole (it clears the error banner)
+  if(failed) loginErr('Couldn’t load the VRM list. Check your connection, then reload the page.');
   setTimeout(()=>{document.getElementById('login-pw').focus();},80);
 }
 
