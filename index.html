@@ -959,7 +959,19 @@ let USER_ROLE = "";
 try{ APP_PW    = localStorage.getItem('vrm_pw')   || sessionStorage.getItem('vrm_pw')   || ""; }catch(e){}
 try{ USER_ROLE = localStorage.getItem('vrm_role') || sessionStorage.getItem('vrm_role') || ""; }catch(e){}
 const isAdmin = ()=> USER_ROLE==='admin';
-async function fetchIP(){ try{ const r=await fetch('https://api.ipify.org?format=json'); const j=await r.json(); USER_IP=j.ip||""; }catch(e){} }
+// Apply the remembered role immediately, so admin-only UI never flashes for a
+// member during the (slow) first getData round-trip. Re-applied after it lands.
+document.documentElement.setAttribute('data-role', USER_ROLE==='admin'?'admin':'member');
+// Best-effort public IP for the audit log; capped so a blocked/slow host can't
+// leave a request hanging for the life of the page.
+async function fetchIP(){
+  try{
+    const c=new AbortController(); const t=setTimeout(()=>c.abort(),4000);
+    const r=await fetch('https://api.ipify.org?format=json',{signal:c.signal});
+    clearTimeout(t);
+    const j=await r.json(); USER_IP=j.ip||"";
+  }catch(e){}
+}
 
 function getApiUrl(){
   if(API_URL_HARDCODED) return API_URL_HARDCODED;
