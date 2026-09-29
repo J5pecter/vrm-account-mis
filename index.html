@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VRM Account MIS</title>
-  <script>/* light is the default; honor an explicit saved choice */(function(){try{var t=localStorage.getItem('vrm_theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
+  <script>/* dark is the default; honor an explicit saved choice */(function(){try{var t=localStorage.getItem('vrm_theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,75 +15,79 @@
        near-black ink, and a single warm orange accent (#F37021). Extended
        display type + Inter Tight body, inspired by fabric.vc.            */
     :root{
-      /* cool off-white paper + neutral hairlines */
-      --bg:#f5f7fa; --bg-2:#eceef2;
-      --surface:#ffffff; --surface-2:#f7f8fb;
-      --line:#e4e6ea; --line-strong:#d0d3d9;
+      /* cool paper with a faint blue tint + hairlines */
+      --bg:#f4f6fb; --bg-2:#e8edf7;
+      --surface:#ffffff; --surface-2:#f6f9fd;
+      --line:#e1e7f1; --line-strong:#ccd5e6;
 
-      /* near-black editorial ink, neutral greys */
-      --ink:#1a1a1a; --ink-2:#313131; --muted:#6f7379; --muted-2:#9a9ea5;
+      /* deep navy ink */
+      --ink:#0f1e3d; --ink-2:#33415c; --muted:#6b7690; --muted-2:#9aa4bb;
 
-      /* brand — Fabric orange */
-      --brand:#f37021; --brand-2:#ff8944; --brand-soft:#fdeadd; --brand-ink:#c1500f;
-      /* supporting semantic hues, warmed to sit beside the orange */
+      /* brand — dark blue */
+      --brand:#1e40af; --brand-2:#2563eb; --brand-soft:#e6ecfb; --brand-ink:#1e3a8a;
+      --on-brand:#ffffff;   /* text/glyph colour on a brand-filled surface */
+      /* supporting semantic hues */
       --teal:#0f9e86; --teal-soft:#e3f5f1;
       --amber:#c9770f; --amber-soft:#f7ecda;
       --rose:#d83a3f; --rose-soft:#fbe9ea;
       --ok:#2f9e5f; --ok-soft:#e6f4ec;
 
-      --grad-brand:linear-gradient(135deg,#ff8a44,#f37021 60%,#e15f10);
-      --grad-bar:linear-gradient(180deg,#ff8944,#f37021);
+      --grad-brand:linear-gradient(135deg,#2b52d6,#1e40af 60%,#182f8f);
+      --grad-bar:linear-gradient(180deg,#2563eb,#1e40af);
 
-      /* faint editorial gridlines for the page background */
-      --grid:rgba(160,162,166,.16);
+      /* faint gridlines for the page background */
+      --grid:rgba(30,64,175,.08);
 
       --font-display:'Archivo','Arial Narrow',Impact,sans-serif;
 
       --radius:14px; --radius-sm:10px; --radius-xs:7px;
-      --shadow-sm:0 1px 2px rgba(20,20,20,.05), 0 1px 3px rgba(20,20,20,.04);
-      --shadow:0 4px 14px rgba(20,20,20,.06), 0 14px 34px rgba(20,20,20,.05);
-      --shadow-lg:0 14px 30px rgba(20,20,20,.12), 0 28px 64px rgba(20,20,20,.12);
-      --ring:0 0 0 3px rgba(243,112,33,.20);
+      --shadow-sm:0 1px 2px rgba(15,30,61,.06), 0 1px 3px rgba(15,30,61,.04);
+      --shadow:0 4px 14px rgba(15,30,61,.08), 0 14px 34px rgba(15,30,61,.06);
+      --shadow-lg:0 14px 30px rgba(15,30,61,.16), 0 28px 64px rgba(15,30,61,.16);
+      --ring:0 0 0 3px rgba(30,64,175,.22);
       --side:264px;
     }
 
     /* dark tokens — applied via system preference OR explicit data-theme="dark" */
     :root[data-theme="dark"]{
-      --bg:#131210; --bg-2:#191714;
-      --surface:#201d19; --surface-2:#191613;
-      --line:#312d28; --line-strong:#423c34;
-      --ink:#f4f1ec; --ink-2:#cdc7bf; --muted:#948d83; --muted-2:#6b655d;
-      --brand:#ff8a44; --brand-2:#ffa062; --brand-soft:#3a2415; --brand-ink:#ffb98a;
-      --teal:#2dd4aa; --teal-soft:#0e2f29;
-      --amber:#f5b445; --amber-soft:#3a2c12;
-      --rose:#ff6b70; --rose-soft:#3a1a1d;
-      --ok:#4cc98a; --ok-soft:#12311f;
-      --grad-brand:linear-gradient(135deg,#ffa062,#ff8a44 60%,#f37021);
-      --grad-bar:linear-gradient(180deg,#ffa062,#ff8a44);
-      --grid:rgba(255,255,255,.05);
-      --shadow-sm:0 1px 2px rgba(0,0,0,.4);
-      --shadow:0 6px 22px rgba(0,0,0,.46);
-      --shadow-lg:0 18px 48px rgba(0,0,0,.6);
-      --ring:0 0 0 3px rgba(255,138,68,.30);
+      /* fluent.health — deep navy + lime accent */
+      --bg:#051023; --bg-2:#081831;
+      --surface:#0b1a38; --surface-2:#081428;
+      --line:#1c2c50; --line-strong:#2a3d68;
+      --ink:#eaeefb; --ink-2:#c6cef0; --muted:#8792bd; --muted-2:#5c688f;
+      --brand:#bfff99; --brand-2:#cdffb0; --brand-soft:#16311c; --brand-ink:#bfff99;
+      --on-brand:#06132b;
+      --teal:#5eead4; --teal-soft:#0c2f2e;
+      --amber:#fbbf5a; --amber-soft:#3a2c12;
+      --rose:#ff7a80; --rose-soft:#3a1a1d;
+      --ok:#7be0a3; --ok-soft:#123322;
+      --grad-brand:linear-gradient(135deg,#cdffb0,#bfff99 60%,#a6f07f);
+      --grad-bar:linear-gradient(180deg,#cdffb0,#bfff99);
+      --grid:rgba(147,180,255,.06);
+      --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+      --shadow:0 6px 22px rgba(0,0,0,.55);
+      --shadow-lg:0 18px 48px rgba(0,0,0,.66);
+      --ring:0 0 0 3px rgba(191,255,153,.30);
     }
     @media (prefers-color-scheme: dark){
       :root:not([data-theme="light"]){
-        --bg:#131210; --bg-2:#191714;
-        --surface:#201d19; --surface-2:#191613;
-        --line:#312d28; --line-strong:#423c34;
-        --ink:#f4f1ec; --ink-2:#cdc7bf; --muted:#948d83; --muted-2:#6b655d;
-        --brand:#ff8a44; --brand-2:#ffa062; --brand-soft:#3a2415; --brand-ink:#ffb98a;
-        --teal:#2dd4aa; --teal-soft:#0e2f29;
-        --amber:#f5b445; --amber-soft:#3a2c12;
-        --rose:#ff6b70; --rose-soft:#3a1a1d;
-        --ok:#4cc98a; --ok-soft:#12311f;
-        --grad-brand:linear-gradient(135deg,#ffa062,#ff8a44 60%,#f37021);
-        --grad-bar:linear-gradient(180deg,#ffa062,#ff8a44);
-        --grid:rgba(255,255,255,.05);
-        --shadow-sm:0 1px 2px rgba(0,0,0,.4);
-        --shadow:0 6px 22px rgba(0,0,0,.46);
-        --shadow-lg:0 18px 48px rgba(0,0,0,.6);
-        --ring:0 0 0 3px rgba(255,138,68,.30);
+        --bg:#051023; --bg-2:#081831;
+        --surface:#0b1a38; --surface-2:#081428;
+        --line:#1c2c50; --line-strong:#2a3d68;
+        --ink:#eaeefb; --ink-2:#c6cef0; --muted:#8792bd; --muted-2:#5c688f;
+        --brand:#bfff99; --brand-2:#cdffb0; --brand-soft:#16311c; --brand-ink:#bfff99;
+        --on-brand:#06132b;
+        --teal:#5eead4; --teal-soft:#0c2f2e;
+        --amber:#fbbf5a; --amber-soft:#3a2c12;
+        --rose:#ff7a80; --rose-soft:#3a1a1d;
+        --ok:#7be0a3; --ok-soft:#123322;
+        --grad-brand:linear-gradient(135deg,#cdffb0,#bfff99 60%,#a6f07f);
+        --grad-bar:linear-gradient(180deg,#cdffb0,#bfff99);
+        --grid:rgba(147,180,255,.06);
+        --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+        --shadow:0 6px 22px rgba(0,0,0,.55);
+        --shadow-lg:0 18px 48px rgba(0,0,0,.66);
+        --ring:0 0 0 3px rgba(191,255,153,.30);
       }
     }
     /* smooth theme cross-fade on the elements that change surface/ink */
@@ -120,7 +124,7 @@
     .brand .logo{
       width:42px;height:42px;border-radius:12px;flex:0 0 auto;
       background:linear-gradient(135deg,var(--brand),var(--brand-2));
-      display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(243,112,33,.35);
+      display:grid;place-items:center;color:var(--on-brand);box-shadow:0 6px 16px rgba(0,0,0,.3);
     }
     .brand .logo svg{width:22px;height:22px}
     .brand .bt{font-family:var(--font-display);font-weight:800;font-size:14.5px;letter-spacing:.02em;line-height:1.05;text-transform:uppercase;font-stretch:125%}
@@ -269,15 +273,18 @@
     .row{display:flex;gap:12px;flex-wrap:wrap}
     .row>div{flex:1;min-width:120px}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+    /* role-based visibility — members don't see admin-only controls */
+    :root[data-role="member"] .admin-only{display:none!important}
+    :root[data-role="member"] .grid2{grid-template-columns:1fr}
 
     .btn{
       display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      border:0;background:var(--brand);color:#fff;font-weight:650;font-size:14px;
+      border:0;background:var(--brand);color:var(--on-brand);font-weight:700;font-size:14px;
       padding:10px 18px;border-radius:var(--radius-xs);cursor:pointer;transition:.15s;white-space:nowrap;
-      box-shadow:0 4px 12px rgba(243,112,33,.26);
+      box-shadow:0 4px 12px rgba(0,0,0,.2);
     }
     .btn svg{width:16px;height:16px}
-    .btn:hover{background:var(--brand-2);transform:translateY(-1px);box-shadow:0 6px 16px rgba(243,112,33,.34)}
+    .btn:hover{background:var(--brand-2);transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.28)}
     .btn:active{transform:translateY(0)}
     .btn.ghost{background:var(--surface);color:var(--ink-2);border:1px solid var(--line-strong);box-shadow:none}
     .btn.ghost:hover{background:var(--bg-2);color:var(--ink);transform:none}
@@ -363,12 +370,95 @@
     .setup{position:fixed;inset:0;z-index:180;display:none;place-items:center;padding:22px;background:var(--bg)}
     .setup.show{display:grid}
     .setup-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-lg);max-width:440px;width:100%;padding:30px 28px;text-align:center}
-    .setup-logo{width:56px;height:56px;margin:0 auto 16px;border-radius:15px;display:grid;place-items:center;color:#fff;background:var(--grad-brand);box-shadow:0 10px 24px rgba(91,82,240,.35)}
+    .setup-logo{width:56px;height:56px;margin:0 auto 16px;border-radius:15px;display:grid;place-items:center;color:var(--on-brand);background:var(--grad-brand);box-shadow:0 10px 24px rgba(0,0,0,.35)}
     .setup-logo svg{width:28px;height:28px}
     .setup-card h2{margin:0 0 8px;font-size:20px;font-weight:800;letter-spacing:-.02em}
     .setup-card p{margin:0 0 18px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
     .setup-card code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--bg-2);padding:2px 6px;border-radius:6px;color:var(--brand-ink)}
     .setup-hint{font-size:12px;color:var(--muted);margin:14px 0 0}
+
+    /* ─────────────────────────  Sign-in screen  ───────────────────────── */
+    .auth{position:fixed;inset:0;z-index:190;display:none;background:var(--bg)}
+    .auth.show{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+    /* left — brand panel */
+    .auth-brand{position:relative;overflow:hidden;padding:44px 48px;display:flex;flex-direction:column;
+      background:var(--surface-2);border-right:1px solid var(--line)}
+    .auth-brand::before{content:"";position:absolute;inset:0;pointer-events:none;
+      background:
+        radial-gradient(900px 480px at 12% 8%, color-mix(in srgb,var(--brand) 16%,transparent), transparent 62%),
+        radial-gradient(640px 420px at 88% 96%, color-mix(in srgb,var(--brand-2) 12%,transparent), transparent 66%)}
+    .auth-brand::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+      background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+      background-size:62px 62px;
+      -webkit-mask-image:radial-gradient(70% 62% at 40% 36%,#000,transparent 78%);
+              mask-image:radial-gradient(70% 62% at 40% 36%,#000,transparent 78%)}
+    .auth-brand>*{position:relative;z-index:1}
+    .auth-mark{display:flex;align-items:center;gap:12px}
+    .auth-mark .m{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+      color:var(--on-brand);background:var(--grad-brand);box-shadow:0 10px 24px rgba(0,0,0,.3)}
+    .auth-mark .m svg{width:22px;height:22px}
+    .auth-mark .t{font-family:var(--font-display);font-weight:800;font-size:15px;letter-spacing:.02em;
+      text-transform:uppercase;font-stretch:125%;line-height:1.05}
+    .auth-mark .s{font-size:11.5px;color:var(--muted);margin-top:2px}
+    .auth-copy{margin:auto 0}
+    .auth-copy h1{font-family:var(--font-display);font-weight:800;font-stretch:125%;text-transform:uppercase;
+      font-size:clamp(30px,3.4vw,46px);line-height:1.02;letter-spacing:-.005em;margin:0 0 16px;max-width:15ch}
+    .auth-copy h1 em{font-style:normal;color:var(--brand)}
+    .auth-copy p{margin:0;font-size:14.5px;line-height:1.6;color:var(--ink-2);max-width:42ch}
+    .auth-points{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:11px}
+    .auth-points li{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--ink-2)}
+    .auth-points svg{width:17px;height:17px;flex:0 0 17px;margin-top:1px;color:var(--brand)}
+    .auth-foot{font-size:12px;color:var(--muted-2)}
+    /* right — form panel */
+    .auth-panel{display:grid;place-items:center;padding:34px 28px;overflow:auto}
+    .auth-card{width:100%;max-width:392px}
+    .auth-card h2{font-family:var(--font-display);font-weight:800;font-stretch:125%;text-transform:uppercase;
+      font-size:24px;letter-spacing:.01em;margin:0 0 6px}
+    .auth-card .sub{margin:0 0 22px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+    /* role segmented control */
+    .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--surface-2);
+      border:1px solid var(--line);border-radius:11px;margin-bottom:20px}
+    .seg button{display:flex;align-items:center;justify-content:center;gap:7px;border:0;cursor:pointer;
+      background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:700;
+      padding:9px 10px;border-radius:8px;transition:.15s;white-space:nowrap}
+    .seg button svg{width:15px;height:15px}
+    .seg button:hover{color:var(--ink-2)}
+    .seg button[aria-selected="true"]{background:var(--surface);color:var(--brand-ink);
+      box-shadow:var(--shadow-sm);border:1px solid var(--line)}
+    .fld{margin-bottom:14px}
+    .fld label{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .pw-wrap{position:relative}
+    .pw-wrap input{padding-right:44px}
+    .pw-eye{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:32px;height:32px;
+      display:grid;place-items:center;border:0;background:transparent;color:var(--muted);
+      cursor:pointer;border-radius:7px;transition:.15s}
+    .pw-eye:hover{color:var(--ink-2);background:var(--bg-2)}
+    .pw-eye svg{width:17px;height:17px}
+    .auth-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 18px}
+    .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;user-select:none}
+    .chk input{width:15px;height:15px;accent-color:var(--brand);cursor:pointer;margin:0;padding:0}
+    .auth-err{display:none;align-items:flex-start;gap:9px;margin:0 0 16px;padding:11px 13px;border-radius:var(--radius-xs);
+      background:var(--rose-soft);border:1px solid color-mix(in srgb,var(--rose) 34%,transparent);
+      color:var(--rose);font-size:12.8px;font-weight:600;line-height:1.45}
+    .auth-err.show{display:flex;animation:fade .18s}
+    .auth-err svg{width:16px;height:16px;flex:0 0 16px;margin-top:1px}
+    .auth-note{display:none;align-items:center;gap:8px;font-size:12px;font-weight:650;color:var(--amber);margin:-8px 0 14px}
+    .auth-note.show{display:flex}
+    .auth-note svg{width:14px;height:14px;flex:0 0 14px}
+    .btn.loading{pointer-events:none;opacity:.75}
+    .btn .spin{width:15px;height:15px;border-radius:50%;border:2px solid color-mix(in srgb,var(--on-brand) 35%,transparent);
+      border-top-color:var(--on-brand);animation:spin .6s linear infinite;display:none}
+    .btn.loading .spin{display:block}
+    .btn.loading .lbl{opacity:.85}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .auth-hint{font-size:12px;color:var(--muted);line-height:1.55;margin:16px 0 0;text-align:center}
+    .auth-theme{position:absolute;top:20px;right:22px;z-index:2}
+    @media(max-width:900px){
+      .auth.show{grid-template-columns:1fr}
+      .auth-brand{display:none}
+      .auth-panel{align-content:center}
+    }
+
     .backdrop{display:none;position:fixed;inset:0;background:rgba(10,14,26,.5);z-index:35;backdrop-filter:blur(2px)}
 
     /* modal (confirm) */
@@ -451,17 +541,90 @@
 </div>
 
 <!-- Login gate -->
-<div class="setup" id="login">
-  <div class="setup-card">
-    <div class="setup-logo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+<div class="auth" id="login">
+  <!-- left: brand panel -->
+  <div class="auth-brand">
+    <div class="auth-mark">
+      <div class="m"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-5"/></svg></div>
+      <div>
+        <div class="t">VRM Account MIS</div>
+        <div class="s">Daily accounts tracker</div>
+      </div>
     </div>
-    <h2>Sign in</h2>
-    <p>Enter your name and the team password to record and upload data.</p>
-    <input id="login-name" placeholder="Your name" onkeydown="if(event.key==='Enter')document.getElementById('login-pw').focus()">
-    <input id="login-pw" type="password" placeholder="Password" style="margin-top:10px" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn block" style="margin-top:12px" onclick="doLogin()">Log in</button>
-    <p class="setup-hint">Anyone with the password can sign in. Your name is attached to every change in the activity log.</p>
+    <div class="auth-copy">
+      <h1>Every account, <em>counted</em>.</h1>
+      <p>One shared record of daily client-code activations across the VRM desk — live from the team’s Google Sheet, the moment it’s entered.</p>
+      <ul class="auth-points">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span>Today, month and year-to-date totals per VRM</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span>Bulk Excel / CSV upload with name normalisation</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span>Duplicate client codes blocked across the whole desk</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span>Every change written to a tamper-proof activity log</span></li>
+      </ul>
+    </div>
+    <div class="auth-foot">Internal tool · Anand Rathi</div>
+  </div>
+
+  <!-- right: form -->
+  <div class="auth-panel">
+    <button class="icon-btn theme-btn auth-theme" id="themeBtnAuth" onclick="toggleTheme()" title="Toggle light / dark" aria-label="Toggle theme">
+      <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.6" y1="4.6" x2="6.7" y2="6.7"/><line x1="17.3" y1="17.3" x2="19.4" y2="19.4"/><line x1="4.6" y1="19.4" x2="6.7" y2="17.3"/><line x1="17.3" y1="6.7" x2="19.4" y2="4.6"/></svg>
+    </button>
+
+    <form class="auth-card" id="login-form" onsubmit="event.preventDefault();doLogin()" autocomplete="on">
+      <h2>Sign in</h2>
+      <p class="sub">Choose how you’re signing in, then enter the password you were given.</p>
+
+      <div class="seg" role="tablist" aria-label="Sign in as">
+        <button type="button" role="tab" id="seg-member" aria-selected="true" onclick="setLoginRole('member')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Team member
+        </button>
+        <button type="button" role="tab" id="seg-admin" aria-selected="false" onclick="setLoginRole('admin')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.6 8-10V5.4L12 2 4 5.4V12c0 6.4 8 10 8 10z"/><path d="M9.2 12.2l2 2 3.6-3.8"/></svg>
+          Admin
+        </button>
+      </div>
+
+      <div class="auth-err" id="login-err" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7.5v5.5M12 16.4h.01"/></svg>
+        <span id="login-err-txt"></span>
+      </div>
+
+      <div class="fld" id="fld-name">
+        <label for="login-name">Your name</label>
+        <select id="login-name" onchange="clearLoginErr()"><option value="">— Select your name —</option></select>
+      </div>
+
+      <div class="fld">
+        <label for="login-pw">Password</label>
+        <div class="pw-wrap">
+          <input id="login-pw" type="password" placeholder="Enter password" autocomplete="current-password"
+                 oninput="clearLoginErr()" onkeyup="capsCheck(event)" onkeydown="capsCheck(event)">
+          <button type="button" class="pw-eye" id="pw-eye" onclick="togglePw()" title="Show password" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 12S5.2 5.4 12 5.4 22.4 12 22.4 12 18.8 18.6 12 18.6 1.6 12 1.6 12z"/><circle cx="12" cy="12" r="3.1"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-note" id="caps-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 7h-4v5H9v-5H5l7-7z"/><path d="M9 18h6v3H9z"/></svg>
+        Caps Lock is on
+      </div>
+
+      <div class="auth-row">
+        <label class="chk" for="login-remember">
+          <input type="checkbox" id="login-remember" checked> Keep me signed in
+        </label>
+        <span class="hint" style="margin:0;font-size:12px">Password set by Admin</span>
+      </div>
+
+      <button class="btn block" id="login-btn" type="submit" style="display:flex;align-items:center;justify-content:center;gap:9px">
+        <span class="spin"></span><span class="lbl">Log in</span>
+      </button>
+
+      <p class="auth-hint">Signed-in members can add and import their own accounts; Admin manages VRMs and sees the activity log. Your name is attached to every change.</p>
+    </form>
   </div>
 </div>
 
@@ -492,7 +655,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
     Analysis &amp; Input
   </button>
-  <button class="navbtn" id="nav-logs" onclick="go('logs')">
+  <button class="navbtn admin-only" id="nav-logs" onclick="go('logs')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
     Activity log
   </button>
@@ -630,8 +793,8 @@
     <!-- ══════════════ ANALYSIS & INPUT ══════════════ -->
     <section id="panel-analysis" class="panel">
       <div class="grid2">
-        <!-- Relationship managers -->
-        <div class="card">
+        <!-- Relationship managers (admin only) -->
+        <div class="card admin-only">
           <div class="card-head"><div><h3>Relationship managers</h3><div class="sub">Add or remove VRMs from the team</div></div></div>
           <div class="card-pad">
             <div class="row" style="align-items:flex-end">
@@ -791,7 +954,11 @@ try{ USER_NAME = localStorage.getItem('vrm_user') || ""; }catch(e){}
 
 // Shared login password (verified server-side). Saved per browser after login.
 let APP_PW = "";
-try{ APP_PW = localStorage.getItem('vrm_pw') || ""; }catch(e){}
+let USER_ROLE = "";
+// "Keep me signed in" → localStorage (survives restarts); otherwise sessionStorage (this tab only).
+try{ APP_PW    = localStorage.getItem('vrm_pw')   || sessionStorage.getItem('vrm_pw')   || ""; }catch(e){}
+try{ USER_ROLE = localStorage.getItem('vrm_role') || sessionStorage.getItem('vrm_role') || ""; }catch(e){}
+const isAdmin = ()=> USER_ROLE==='admin';
 async function fetchIP(){ try{ const r=await fetch('https://api.ipify.org?format=json'); const j=await r.json(); USER_IP=j.ip||""; }catch(e){} }
 
 function getApiUrl(){
@@ -823,11 +990,12 @@ async function callServer(fn, ...args){
   try{
     let payload;
     if(fn==='getData')      payload={action:'getData'};
+    else if(fn==='getVrms') payload={action:'getVrms'};
     else if(fn==='getLogs') payload={action:'getLogs',limit:args[0]||300};
     else if(fn==='login')   payload={action:'login',pw:args[0]||''};
     else                    payload=buildPayload(fn,args);
     if(fn!=='login') payload.pw=APP_PW;                 // shared login password (server-verified)
-    if(fn!=='getData'&&fn!=='getLogs'&&fn!=='login'){ payload.by=USER_NAME||''; payload.ip=USER_IP||''; }
+    if(fn!=='getData'&&fn!=='getLogs'&&fn!=='login'&&fn!=='getVrms'){ payload.by=USER_NAME||''; payload.ip=USER_IP||''; }
     // POST with a plain-text JSON body → keeps the password out of the URL and skips CORS preflight
     const res=await fetch(url,{method:'POST',body:JSON.stringify(payload)});
     if(!res.ok) throw new Error('HTTP '+res.status);
@@ -859,7 +1027,7 @@ function toast(msg,type='info',ms=4200){
 // ══════════════════════  Theme  ══════════════════════
 function systemPrefersDark(){return window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;}
 function effectiveDark(){const t=document.documentElement.getAttribute('data-theme');return t?t==='dark':systemPrefersDark();}
-function updateThemeIcon(){const b=document.getElementById('themeBtn');if(b)b.classList.toggle('is-dark',effectiveDark());}
+function updateThemeIcon(){const d=effectiveDark();['themeBtn','themeBtnAuth'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.toggle('is-dark',d);});}
 function toggleTheme(){
   const next=effectiveDark()?'light':'dark';
   document.documentElement.setAttribute('data-theme',next);
@@ -1224,8 +1392,14 @@ function renderVRMList(){
 
 function renderSelects(){
   const sel=document.getElementById("e-vrm"),cur=sel.value;
-  sel.innerHTML=state.vrms.length?state.vrms.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join(""):`<option value="">— add a VRM first —</option>`;
-  if(state.vrms.some(v=>v.name===cur))sel.value=cur;
+  if(!isAdmin() && USER_NAME && USER_NAME!=='Admin'){
+    sel.innerHTML=`<option value="${esc(USER_NAME)}">${esc(USER_NAME)}</option>`;
+    sel.value=USER_NAME; sel.disabled=true;                 // member: locked to own VRM
+  }else{
+    sel.disabled=false;
+    sel.innerHTML=state.vrms.length?state.vrms.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join(""):`<option value="">— add a VRM first —</option>`;
+    if(state.vrms.some(v=>v.name===cur))sel.value=cur;
+  }
   const f=document.getElementById("filter-vrm"),fc=f.value;
   f.innerHTML=`<option value="">All VRMs</option>`+state.vrms.map(v=>`<option value="${esc(v.name)}">${esc(v.name)}</option>`).join("");
   f.value=fc;
@@ -1243,10 +1417,11 @@ function renderEntries(){
     const msg=(q||filter)?"No entries match your search.":"No entries yet — record accounts on the right.";
     body.innerHTML=`<tr><td colspan="4"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>${msg}</p></div></td></tr>`;
     foot.innerHTML="";return;}
+  const del=isAdmin();
   body.innerHTML=list.map(e=>
     `<tr><td>${fmtDate(e.date)}</td><td>${avatar(e.vrm)}</td><td><span class="code-pill">${esc(e.clientCode||"—")}</span></td>
-    <td class="num"><button class="btn danger icon" onclick="deleteEntry('${esc(e.id)}')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td></tr>`
+    <td class="num">${del?`<button class="btn danger icon" onclick="deleteEntry('${esc(e.id)}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`:'<span style="color:var(--muted-2)">—</span>'}</td></tr>`
   ).join("");
   foot.innerHTML=`<tr><td colspan="2">Total accounts</td><td class="num">${list.length}</td><td></td></tr>`;
 }
@@ -1463,27 +1638,109 @@ function saveApi(){
 }
 
 // ── Login gate ──
-function showLogin(){
-  const l=document.getElementById('login'); l.classList.add('show');
-  const n=document.getElementById('login-name'); if(n){try{n.value=localStorage.getItem('vrm_user')||"";}catch(e){}}
-  setTimeout(()=>{(n&&!n.value?n:document.getElementById('login-pw')).focus();},80);
+function applyRoleUI(){ document.documentElement.setAttribute('data-role', USER_ROLE||'member'); renderSelects(); }
+
+let LOGIN_ROLE='member';   // which tab of the sign-in form is active
+
+/* Sign-in helpers ------------------------------------------------------- */
+function loginErr(msg){
+  const b=document.getElementById('login-err');
+  document.getElementById('login-err-txt').textContent=msg;
+  b.classList.add('show');
 }
+function clearLoginErr(){ document.getElementById('login-err').classList.remove('show'); }
+function loginBusy(on){
+  const b=document.getElementById('login-btn');
+  b.classList.toggle('loading',!!on);
+  b.querySelector('.lbl').textContent = on ? 'Signing in…' : 'Log in';
+  ['login-name','login-pw','login-remember','seg-member','seg-admin'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.disabled=!!on;
+  });
+}
+function togglePw(){
+  const i=document.getElementById('login-pw'), b=document.getElementById('pw-eye');
+  const show = i.type==='password';
+  i.type = show ? 'text' : 'password';
+  b.title = b.ariaLabel = show ? 'Hide password' : 'Show password';
+  b.innerHTML = show
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 5.6A9.6 9.6 0 0 1 12 5.4c6.8 0 10.4 6.6 10.4 6.6a18 18 0 0 1-3.5 4.4M6.2 6.2A18 18 0 0 0 1.6 12S5.2 18.6 12 18.6a9.6 9.6 0 0 0 4.1-.9"/><path d="M10 10a3.1 3.1 0 0 0 4.2 4.2"/><line x1="2.5" y1="2.5" x2="21.5" y2="21.5"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 12S5.2 5.4 12 5.4 22.4 12 22.4 12 18.8 18.6 12 18.6 1.6 12 1.6 12z"/><circle cx="12" cy="12" r="3.1"/></svg>';
+  i.focus();
+}
+function capsCheck(e){
+  let on=false; try{ on=e.getModifierState&&e.getModifierState('CapsLock'); }catch(_){}
+  document.getElementById('caps-note').classList.toggle('show',!!on);
+}
+function setLoginRole(role){
+  LOGIN_ROLE = role==='admin' ? 'admin' : 'member';
+  document.getElementById('seg-member').setAttribute('aria-selected', String(LOGIN_ROLE==='member'));
+  document.getElementById('seg-admin') .setAttribute('aria-selected', String(LOGIN_ROLE==='admin'));
+  document.getElementById('fld-name').style.display = LOGIN_ROLE==='admin' ? 'none' : '';
+  clearLoginErr();
+  document.getElementById('login-pw').focus();
+}
+
+async function showLogin(){
+  document.getElementById('login').classList.add('show');
+  const sel=document.getElementById('login-name');
+  try{
+    const r=await callServer('getVrms');
+    const names=(r&&r.vrms)||[];
+    sel.innerHTML='<option value="">— Select your name —</option>'
+      + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  }catch(e){
+    sel.innerHTML='<option value="">— Select your name —</option>';
+  }
+  // restore the last person who signed in on this browser
+  let saved=''; try{saved=localStorage.getItem('vrm_user')||'';}catch(e){}
+  if(saved==='Admin'){ setLoginRole('admin'); }
+  else { setLoginRole('member'); if(saved) sel.value=saved; }
+  setTimeout(()=>{document.getElementById('login-pw').focus();},80);
+}
+
 async function doLogin(){
-  const name=document.getElementById('login-name').value.trim();
-  const pw=document.getElementById('login-pw').value;
-  if(!name){toast('Enter your name.','warn');return;}
-  if(!pw){toast('Enter the password.','warn');return;}
-  APP_PW=pw; USER_NAME=name;
-  let r; try{ r=await callServer('getData'); }catch(e){ r=null; }
-  if(!r||r.error){ APP_PW=''; toast('Wrong password — try again.','err'); return; }
-  try{localStorage.setItem('vrm_pw',pw);localStorage.setItem('vrm_user',name);}catch(e){}
-  document.getElementById('login').classList.remove('show');
+  const isAdminTab = LOGIN_ROLE==='admin';
+  const choice = isAdminTab ? '__ADMIN__' : document.getElementById('login-name').value;
+  const pw     = document.getElementById('login-pw').value;
+  const keep   = document.getElementById('login-remember').checked;
+  clearLoginErr();
+  if(!isAdminTab && !choice){ loginErr('Select your name from the list to continue.'); document.getElementById('login-name').focus(); return; }
+  if(!pw){ loginErr('Enter your password.'); document.getElementById('login-pw').focus(); return; }
+
+  loginBusy(true);
+  let r; try{ r=await callServer('login',pw); }catch(e){ r=null; }
+  if(!r){ loginBusy(false); loginErr('Can’t reach the server. Check your connection and try again.'); return; }
+  if(!r.ok){ loginBusy(false); loginErr('That password isn’t right. Try again.'); document.getElementById('login-pw').select(); return; }
+
+  const role=r.role;
+  if(isAdminTab && role!=='admin'){ loginBusy(false); loginErr('That’s the member password. Admin sign-in needs the admin password.'); document.getElementById('login-pw').select(); return; }
+  if(!isAdminTab && role!=='member'){ loginBusy(false); loginErr('That’s the admin password — switch to the Admin tab to use it.'); document.getElementById('login-pw').select(); return; }
+
+  APP_PW=pw; USER_ROLE=role; USER_NAME=(isAdminTab?'Admin':choice);
+  try{
+    localStorage.setItem('vrm_user',USER_NAME);
+    if(keep){ localStorage.setItem('vrm_pw',pw); localStorage.setItem('vrm_role',role); sessionStorage.removeItem('vrm_pw'); sessionStorage.removeItem('vrm_role'); }
+    else    { sessionStorage.setItem('vrm_pw',pw); sessionStorage.setItem('vrm_role',role); localStorage.removeItem('vrm_pw'); localStorage.removeItem('vrm_role'); }
+  }catch(e){}
+
+  setConn('wait');
+  let d; try{ d=await callServer('getData'); }catch(e){ d=null; }
+  loginBusy(false);
+  if(!d||d.error){ loginErr('Signed in, but the data wouldn’t load. Try again in a moment.'); setConn('off'); return; }
+
   document.getElementById('login-pw').value='';
-  state=r; renderAll(); setConn('ok'); updateUserChip();
+  document.getElementById('caps-note').classList.remove('show');
+  document.getElementById('login').classList.remove('show');
+  state=d; applyRoleUI(); renderAll(); setConn('ok'); updateUserChip();
+  toast('Welcome back, '+USER_NAME+'.','ok');
 }
+
 function logout(){
-  try{localStorage.removeItem('vrm_pw');}catch(e){}
-  APP_PW=''; location.reload();
+  try{
+    localStorage.removeItem('vrm_pw');   localStorage.removeItem('vrm_role');
+    sessionStorage.removeItem('vrm_pw'); sessionStorage.removeItem('vrm_role');
+  }catch(e){}
+  APP_PW=''; USER_ROLE=''; location.reload();
 }
 
 async function boot(){
@@ -1505,7 +1762,7 @@ async function boot(){
   try{
     const r=await callServer('getData');
     if(!r||r.error){ showLogin(); setConn('off'); return; }  // saved password no longer valid
-    state=r; renderAll(); setConn('ok');
+    state=r; applyRoleUI(); renderAll(); setConn('ok');
   }catch(e){
     console.error(e);
     setConn('off');
