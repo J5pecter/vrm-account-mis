@@ -87,10 +87,12 @@ git push -u origin main
 - **Signing in** — the app is gated by a full-screen **Sign in** screen (brand panel on the left,
   form on the right; it collapses to the form alone on narrow screens). You pick a tab —
   **Team member** or **Admin** — and enter the matching password:
-  - *Team member* also asks **which VRM you are**, chosen from the live dropdown of names in the
+  - *Team member* asks **which VRM you are**, chosen from the live dropdown of names in the
     Sheet (no free typing, so the log can never carry a misspelt name). The form remembers your
     last selection in that browser.
-  - *Admin* needs no name — just the admin password.
+  - *Admin* asks **which admin you are** — the same dropdown, switched to the admin roster
+    (Lavina, Rajashri, Jayesh). Admins sign in as themselves, so the activity log names a
+    person rather than a generic "Admin".
 
   The screen validates before and after the call: missing name, missing password, wrong password,
   server unreachable, and **using the wrong tab for the password you hold** each get their own
@@ -107,16 +109,36 @@ git push -u origin main
   client codes (comma / newline separated); **import** Excel/CSV (with **template** downloads);
   a **client-code lookup** that shows which VRM already owns a code; and a searchable entries
   table.
-- **Theme** — **light mode is the default** for everyone (the fabric.vc-style off-white look),
-  regardless of the viewer's OS setting. The sun/moon toggle in the top bar switches to dark,
-  and each person's explicit choice is remembered in their own browser. Clearing a browser's
-  saved choice (or a first-time visitor) returns to the light default. A live **connection
-  indicator** sits in the sidebar footer.
+- **Admin overview** *(admins only)* — the desk-management view. It deliberately does **not**
+  restate the dashboard totals; it answers *who still owes me numbers today*:
+  **today's reporting** (every VRM with their count and a Filed / Not yet pill, the outstanding
+  ones listed first), the **month leaderboard** with each VRM's share of the desk, a
+  **team & access** roster showing who is Admin / Admin + VRM / VRM, and the **last few
+  activity-log entries** inline.
+- **Theme** — **dark is the default** (the fluent.health-style deep navy with a lime accent),
+  regardless of the viewer's OS setting. The sun/moon toggle in the top bar switches to the
+  light treatment, and each person's explicit choice is remembered in their own browser.
+  Clearing a browser's saved choice (or a first-time visitor) returns to the dark default.
+  A live **connection indicator** sits in the sidebar footer.
 
 ### Import formats (see `sample-import.csv`)
 - **Structured**: columns for **VRM**, **Date**, **Client Code** (headers matched loosely).
   Dates accept `dd/mm/yyyy`, `yyyy-mm-dd`, or Excel serials. Unknown VRMs are created.
 - **Plain list**: a single column of codes → assigned to the VRM & date selected in the form.
+
+### The team
+Nine relationship managers, seeded in `SEED_VRMS`:
+
+| VRM | | VRM | | VRM |
+|-----|-|-----|-|-----|
+| Riddhi Mistry | | Manisha Mahante | | Parth Sharma |
+| Pavan Soni | | Khushi Dodiya | | Rajashri Mohandas |
+| Swarna Shetty | | Aakansha Baranwal | | Lavina Saldanha |
+
+**Lavina Saldanha**, **Rajashri Mohandas** and **Jayesh Mahajan** are the admins (`ADMIN_NAMES`).
+Lavina and Rajashri are on both lists — they record their own accounts like any VRM, and pick
+the *Admin* tab when they need the management view. Jayesh is admin only: no VRM row, so no
+accounts are ever filed under his name.
 
 ### AliasKey — automatic name normalization
 Uploaded files often carry messy or variant VRM names. On import, each row's VRM name is
@@ -124,13 +146,26 @@ resolved through the **`Aliases`** tab in the Google Sheet:
 
 | Column A — Alias (as uploaded) | Column B — Canonical VRM name |
 |--------------------------------|-------------------------------|
-| `parth sharma vijay`           | Parth Vijay Sharma            |
-| `aakanksha baranwal bhanupratap` | Baranwal Aakanksha Bhanupratap |
+| `pavan lekhraj soni`           | Pavan Soni                    |
+| `swarnarekha divakar shetty`   | Swarna Shetty                 |
+| `manisha hemant mahante`       | Manisha Mahante               |
+| `khushi mahesh dodiya`         | Khushi Dodiya                 |
+| `aakanksha baranwal`           | Aakansha Baranwal             |
+| `parth sharma vijay`           | Parth Sharma                  |
 | …                              | …                             |
 
-Matching ignores case and extra spaces. If a row matches an alias, it's filed under the
-canonical name; otherwise the name is used as-is (creating the VRM if new).
+The long-form spellings above are the roster's previous names, kept so older uploads still
+file correctly. Matching ignores case and extra spaces. If a row matches an alias, it's filed
+under the canonical name; otherwise the name is used as-is (creating the VRM if new).
 **To add or change mappings, just edit rows in the `Aliases` tab — no redeploy needed.**
+
+### Changing the roster
+Edit `SEED_VRMS` / `ADMIN_NAMES` in `backend/Code.gs`, add any old→new spelling to `ALIAS_SEED`,
+save, then **Run ▸ `reseedVRMs`** once from the editor. It *migrates* rather than wipes: a VRM
+whose old name is in the AliasKey is renamed in place, **every entry filed under the old name
+moves with it**, new `ALIAS_SEED` rows are pushed into the `Aliases` tab, and any name not in
+`SEED_VRMS` is kept as long as it still owns entries. Redeploy afterwards (**New version**) so
+the web app serves the new `ADMIN_NAMES`.
 
 ---
 
@@ -143,8 +178,9 @@ browser skips the CORS preflight — Apps Script has no `OPTIONS` handler). **Ev
 
 | Call | Body |
 |------|------|
-| `login` | `{ "action":"login", "pw":"…" }` → `{ "ok":true/false }` |
-| `getData` | `{ "action":"getData", "pw":"…" }` |
+| `login` | `{ "action":"login", "pw":"…" }` → `{ "ok":true/false, "role":"admin|member" }` |
+| `getVrms` | `{ "action":"getVrms" }` → `{ "vrms":[…], "admins":[…] }` — **public**, no password (the sign-in dropdowns need it) |
+| `getData` | `{ "action":"getData", "pw":"…" }` → `{ "vrms":[…], "entries":[…], "admins":[…] }` |
 | `addVRM` | `{ "action":"addVRM", "name":"…", "pw":"…" }` |
 | `renameVRM` | `{ "action":"renameVRM", "oldName":"…", "newName":"…", "pw":"…" }` |
 | `deleteVRM` | `{ "action":"deleteVRM", "name":"…", "pw":"…" }` |
@@ -192,7 +228,10 @@ are blocked server-side too, not just hidden in the UI.
   only needs your Apps Script URL.
 - After editing `backend/Code.gs`, redeploy via **Deploy → Manage deployments → ✏ Edit →
   New version → Deploy** (the `/exec` URL stays the same).
-- The UI follows a **fabric.vc-inspired** look: off-white (#f5f7fa) paper with faint editorial
-  gridlines, a single warm-orange accent (#F37021), Inter Tight body text, and an extended bold
-  display face (Archivo) for the wordmark, headings, and KPI numbers. Light is the default;
-  dark is an opt-in toggle, remembered per browser.
+- The UI merges **fluent.health** (dark) with **fabric.vc** (typography): deep navy (#051023)
+  surfaces with a lime accent (#BFFF99) and faint editorial gridlines, Inter Tight body text,
+  and an extended bold display face (Archivo) for the wordmark, headings, and KPI numbers.
+  Dark is the default; the light treatment is an opt-in toggle, remembered per browser.
+- `backend/Code.gs` is deliberately **pure ASCII**. Em dashes, arrows and box-drawing characters
+  in comments have been corrupted in transit before (the `\uFFFD` strippers in `normName_` are
+  the scar tissue), so the file avoids non-ASCII entirely.
