@@ -307,6 +307,28 @@
     .vitem:hover{border-color:var(--line-strong);background:var(--surface)}
     .vitem .pill{font-size:11px;font-weight:650;color:var(--muted);background:var(--bg-2);padding:2px 8px;border-radius:20px}
 
+    /* ── Admin overview ───────────────────────────────────────────── */
+    .kpi .val.adm-name{font-size:20px;line-height:1.25;font-stretch:normal;letter-spacing:-.01em}
+    /* status of today's filing, per VRM */
+    .st{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:650;
+        padding:3px 9px;border-radius:20px;white-space:nowrap}
+    .st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+    .st.done{color:var(--teal);background:var(--teal-soft)}
+    .st.none{color:var(--amber);background:var(--amber-soft)}
+    tr.is-pending td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
+    /* roster cards */
+    .roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+    .rperson{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);
+             border-radius:12px;background:var(--bg-2)}
+    .rperson .ini{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+                  font-size:12px;font-weight:800;color:#fff;flex:none}
+    .rperson .rn{font-weight:650;font-size:13.5px;line-height:1.3}
+    .rperson .rr{font-size:11px;color:var(--muted-2);font-weight:600;margin-top:1px}
+    .rbadge{margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+            padding:3px 8px;border-radius:20px;flex:none}
+    .rbadge.adm{color:var(--brand);background:var(--brand-soft)}
+    .rbadge.vrm{color:var(--muted);background:var(--bg)}
+
     /* file upload */
     .drop{position:relative;border:1.5px dashed var(--line-strong);border-radius:var(--radius-sm);background:var(--surface-2);padding:16px;text-align:center;transition:.15s;cursor:pointer}
     .drop:hover{border-color:var(--brand);background:var(--brand-soft)}
@@ -592,7 +614,7 @@
       </div>
 
       <div class="fld" id="fld-name">
-        <label for="login-name">Your name</label>
+        <label for="login-name" id="login-name-label">Your name</label>
         <select id="login-name" onchange="clearLoginErr()"><option value="">— Select your name —</option></select>
       </div>
 
@@ -654,6 +676,10 @@
   <button class="navbtn" id="nav-analysis" onclick="go('analysis')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
     Analysis &amp; Input
+  </button>
+  <button class="navbtn admin-only" id="nav-admin" onclick="go('admin')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.6 8-10V5.4L12 2 4 5.4V12c0 6.4 8 10 8 10z"/><path d="M9.2 12.2l2 2 3.6-3.8"/></svg>
+    Admin overview
   </button>
   <button class="navbtn admin-only" id="nav-logs" onclick="go('logs')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
@@ -878,6 +904,77 @@
     </section>
 
     <!-- ══════════════ ACTIVITY LOG ══════════════ -->
+    <section id="panel-admin" class="panel">
+      <div class="kpis">
+        <div class="kpi i-today">
+          <div class="top"><span class="lbl">Reported today</span>
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          </div>
+          <div class="val" id="a-reported">0</div><div class="cap" id="a-reported-cap">VRMs with entries today</div>
+        </div>
+        <div class="kpi i-month">
+          <div class="top"><span class="lbl">Team this month</span>
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          </div>
+          <div class="val" id="a-month">0</div><div class="cap" id="a-month-cap">Accounts opened</div>
+        </div>
+        <div class="kpi i-year">
+          <div class="top"><span class="lbl">Average per VRM</span>
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-5"/></svg></span>
+          </div>
+          <div class="val" id="a-avg">0</div><div class="cap">This month, across the desk</div>
+        </div>
+        <div class="kpi i-vrm">
+          <div class="top"><span class="lbl">Top performer</span>
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M8.2 12.5 7 22l5-2.6L17 22l-1.2-9.5"/></svg></span>
+          </div>
+          <div class="val adm-name" id="a-top">—</div><div class="cap" id="a-top-cap">Leading this month</div>
+        </div>
+      </div>
+
+      <div class="sec"><h2>Today’s reporting</h2><span class="line"></span>
+        <span class="hint" style="margin:0;font-size:12px" id="a-today-stamp"></span>
+      </div>
+      <p class="hint" style="margin:-6px 0 14px">Who has filed accounts today and who hasn’t — the ones still outstanding are listed first.</p>
+      <div class="card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>VRM</th><th class="num">Today</th><th class="num">Month</th><th class="num">Total</th><th>Status</th></tr></thead>
+            <tbody id="a-today-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="sec"><h2>Month leaderboard</h2><span class="line"></span>
+        <span class="hint" style="margin:0;font-size:12px" id="a-lead-cap"></span>
+      </div>
+      <div class="card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Rank</th><th>VRM</th><th class="num">Month</th><th>Share of desk</th></tr></thead>
+            <tbody id="a-lead-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="sec"><h2>Team &amp; access</h2><span class="line"></span></div>
+      <p class="hint" style="margin:-6px 0 14px">Admins manage the roster and see the activity log. Everyone else signs in with the member password and records their own accounts.</p>
+      <div class="card"><div id="a-roster" class="roster"></div></div>
+
+      <div class="sec"><h2>Recent activity</h2><span class="line"></span>
+        <button class="btn ghost mini" onclick="renderAdmin()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh</button>
+      </div>
+      <div class="card">
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>When</th><th>By</th><th>Action</th><th>VRM</th><th>Details</th></tr></thead>
+            <tbody id="a-log-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <section id="panel-logs" class="panel">
       <div class="sec"><h2>Activity log</h2><span class="line"></span>
         <button class="btn ghost mini" onclick="renderLogs()">
@@ -1011,7 +1108,10 @@ async function callServer(fn, ...args){
     // POST with a plain-text JSON body → keeps the password out of the URL and skips CORS preflight
     const res=await fetch(url,{method:'POST',body:JSON.stringify(payload)});
     if(!res.ok) throw new Error('HTTP '+res.status);
-    return await res.json();
+    const j=await res.json();
+    // the roster of admins rides along on getData/getVrms — keep it current
+    if(j&&j.admins) ADMIN_NAMES_LIST=j.admins;
+    return j;
   }catch(e){
     toast('Server error: '+e.message,'err');
     throw e;
@@ -1163,14 +1263,17 @@ function go(tab,anchor){
   document.getElementById("panel-dash").classList.toggle("show",tab==="dash");
   document.getElementById("panel-analysis").classList.toggle("show",tab==="analysis");
   document.getElementById("panel-logs").classList.toggle("show",tab==="logs");
+  document.getElementById("panel-admin").classList.toggle("show",tab==="admin");
   document.getElementById("nav-dash").classList.toggle("active",tab==="dash"&&!anchor);
   document.getElementById("nav-mis").classList.toggle("active",tab==="dash"&&anchor==="mis");
   document.getElementById("nav-analysis").classList.toggle("active",tab==="analysis");
   document.getElementById("nav-logs").classList.toggle("active",tab==="logs");
-  document.getElementById("pagetitle").textContent=tab==="analysis"?"Analysis & Input":tab==="logs"?"Activity log":(anchor==="mis"?"MIS – VRM summary":"Dashboard");
-  document.querySelector(".topbar .ts").textContent=tab==="analysis"?"Manage VRMs, record & import accounts":tab==="logs"?"Who changed what, and when":"Accounts opened by relationship manager";
+  document.getElementById("nav-admin").classList.toggle("active",tab==="admin");
+  document.getElementById("pagetitle").textContent=tab==="analysis"?"Analysis & Input":tab==="logs"?"Activity log":tab==="admin"?"Admin overview":(anchor==="mis"?"MIS – VRM summary":"Dashboard");
+  document.querySelector(".topbar .ts").textContent=tab==="analysis"?"Manage VRMs, record & import accounts":tab==="logs"?"Who changed what, and when":tab==="admin"?"Desk status, ranking and access":"Accounts opened by relationship manager";
   closeSide();
   if(tab==="logs")renderLogs();
+  if(tab==="admin")renderAdmin();
   if(anchor)setTimeout(()=>document.getElementById(anchor).scrollIntoView({behavior:"smooth",block:"start"}),80);
   else window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -1389,6 +1492,85 @@ function renderDashboard(){
       <div class="vstats"><div class="s"><div class="n">${s.t}</div><div class="l">Today</div></div>
       <div class="s m"><div class="n">${s.m}</div><div class="l">Month</div></div>
       <div class="s y"><div class="n">${s.y}</div><div class="l">Year</div></div></div></div>`;}).join("");
+}
+
+// ══════════════════════  Admin overview  ══════════════════════
+// Admin-only view. Deliberately not a copy of the dashboard: it answers
+// "who still owes me numbers today, who's ahead, and what just changed"
+// rather than restating the team totals.
+let ADMIN_NAMES_LIST = [];   // filled from getVrms; falls back to the roster
+
+function renderAdmin(){
+  if(!isAdmin()) return;                    // the panel — and getLogs — are admin-only
+  if(!document.getElementById('panel-admin')) return;
+  const rows=state.vrms.map(v=>({name:v.name,...stats(v.name)}));
+  const tM=rows.reduce((s,r)=>s+r.m,0);
+  const reported=rows.filter(r=>r.t>0).length;
+
+  document.getElementById('a-reported').textContent=reported;
+  document.getElementById('a-reported-cap').textContent=
+    rows.length? `of ${rows.length} VRM${rows.length!==1?'s':''} — ${rows.length-reported} still to file` : 'No VRMs yet';
+  document.getElementById('a-month').textContent=tM;
+  document.getElementById('a-month-cap').textContent=MONTHS[new Date().getMonth()]+' '+new Date().getFullYear();
+  document.getElementById('a-avg').textContent=rows.length?Math.round(tM/rows.length):0;
+
+  const top=rows.slice().sort((a,b)=>b.m-a.m)[0];
+  document.getElementById('a-top').textContent = (top&&top.m>0)?top.name:'—';
+  document.getElementById('a-top-cap').textContent = (top&&top.m>0)?`${top.m} account${top.m!==1?'s':''} this month`:'No accounts this month yet';
+  document.getElementById('a-today-stamp').textContent=fmtDate(todayISO());
+
+  // Today's reporting — outstanding first, then by today's count
+  const tb=document.getElementById('a-today-body');
+  const byToday=rows.slice().sort((a,b)=>(a.t>0)-(b.t>0)||b.t-a.t||a.name.localeCompare(b.name));
+  tb.innerHTML=!rows.length
+    ? `<tr><td colspan="5"><div class="empty"><p>No VRMs yet — add one from Analysis &amp; Input.</p></div></td></tr>`
+    : byToday.map(r=>`<tr class="${r.t>0?'':'is-pending'}"><td>${avatar(r.name)}</td>
+        <td class="num">${r.t}</td><td class="num">${r.m}</td><td class="num"><b>${r.tot}</b></td>
+        <td><span class="st ${r.t>0?'done':'none'}">${r.t>0?'Filed':'Not yet'}</span></td></tr>`).join('');
+
+  // Month leaderboard
+  const lb=document.getElementById('a-lead-body');
+  const byMonth=rows.slice().sort((a,b)=>b.m-a.m||b.tot-a.tot||a.name.localeCompare(b.name));
+  document.getElementById('a-lead-cap').textContent=MONTHS[new Date().getMonth()]+' '+new Date().getFullYear();
+  lb.innerHTML=!rows.length
+    ? `<tr><td colspan="4"><div class="empty"><p>Nothing to rank yet.</p></div></td></tr>`
+    : byMonth.map((r,i)=>{
+        const pct=tM>0?Math.round(r.m/tM*100):0;
+        const rk=i<3?`<span class="rank r${i+1}">${i+1}</span>`:`<span style="color:var(--muted-2);font-weight:600">${i+1}</span>`;
+        return `<tr><td>${rk}</td><td>${avatar(r.name)}</td><td class="num"><b>${r.m}</b></td>
+          <td class="sharecell"><div class="sharebar"><div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="pct">${pct}%</span></div></td></tr>`;
+      }).join('');
+
+  // Team & access
+  const admins=ADMIN_NAMES_LIST.slice();
+  const isAdm=n=>admins.some(a=>a.toLowerCase()===n.toLowerCase());
+  const people=state.vrms.map(v=>({name:v.name,admin:isAdm(v.name)}));
+  // admins who aren't VRMs (e.g. a desk head with no accounts of their own)
+  admins.forEach(a=>{ if(!people.some(p=>p.name.toLowerCase()===a.toLowerCase())) people.push({name:a,admin:true,noVrm:true}); });
+  people.sort((a,b)=>(b.admin-a.admin)||a.name.localeCompare(b.name));
+  document.getElementById('a-roster').innerHTML=!people.length
+    ? `<div class="empty"><p>No one on the roster yet.</p></div>`
+    : people.map(p=>`<div class="rperson">
+        <span class="ini" style="background:${avColor(p.name)}">${esc(initials(p.name))}</span>
+        <span><span class="rn">${esc(p.name)}</span><span class="rr">${p.admin?(p.noVrm?'Admin only':'Admin + VRM'):'Relationship manager'}</span></span>
+        <span class="rbadge ${p.admin?'adm':'vrm'}">${p.admin?'Admin':'VRM'}</span></div>`).join('');
+
+  // only hit the network for logs when the panel is actually on screen
+  if(document.getElementById("panel-admin").classList.contains("show")) renderAdminLog();
+}
+
+// Last few audit-log rows, inline on the admin page.
+async function renderAdminLog(){
+  const b=document.getElementById('a-log-body');
+  if(!b||!isAdmin()) return;
+  b.innerHTML=`<tr><td colspan="5" style="color:var(--muted-2)">Loading…</td></tr>`;
+  let r; try{ r=await callServer('getLogs',8); }catch(e){ r=null; }
+  const logs=(r&&r.logs)||[];
+  b.innerHTML=!logs.length
+    ? `<tr><td colspan="5"><div class="empty"><p>No activity recorded yet.</p></div></td></tr>`
+    : logs.slice(0,8).map(l=>`<tr><td>${fmtTime(l.time)}</td><td>${esc(l.by||'Unknown')}</td>
+        <td>${actionTag(l.action||'')}</td><td>${l.vrm?esc(l.vrm):'—'}</td>
+        <td style="color:var(--muted)">${esc(l.detail||'')}</td></tr>`).join('');
 }
 
 function renderVRMList(){
@@ -1637,7 +1819,7 @@ function downloadBlob(blob,name){
 }
 
 // ══════════════════════  Boot  ══════════════════════
-function renderAll(){renderDashboard();renderTrend();renderVRMList();renderSelects();renderEntries();renderFilter();}
+function renderAll(){renderDashboard();renderTrend();renderVRMList();renderSelects();renderEntries();renderFilter();renderAdmin();}
 
 function saveApi(){
   const v=document.getElementById('setup-url').value.trim();
@@ -1650,7 +1832,12 @@ function saveApi(){
 }
 
 // ── Login gate ──
-function applyRoleUI(){ document.documentElement.setAttribute('data-role', USER_ROLE||'member'); renderSelects(); }
+function applyRoleUI(){
+  document.documentElement.setAttribute('data-role', USER_ROLE||'member');
+  // a member landing on a stale admin tab gets sent back to the dashboard
+  if(!isAdmin() && document.getElementById('panel-admin').classList.contains('show')) go('dash');
+  renderSelects();
+}
 
 let LOGIN_ROLE='member';   // which tab of the sign-in form is active
 
@@ -1683,11 +1870,26 @@ function capsCheck(e){
   let on=false; try{ on=e.getModifierState&&e.getModifierState('CapsLock'); }catch(_){}
   document.getElementById('caps-note').classList.toggle('show',!!on);
 }
+// Both tabs pick a name from the same select; only the option list differs.
+// Admins sign in as themselves so the audit log names a person, not "Admin".
+let LOGIN_VRMS=[], LOGIN_ADMINS=[];
+
+function fillNameSelect(preferred){
+  const sel=document.getElementById('login-name');
+  const list=LOGIN_ROLE==='admin'?LOGIN_ADMINS:LOGIN_VRMS;
+  const want=preferred!==undefined?preferred:sel.value;
+  sel.innerHTML='<option value="">— Select your name —</option>'
+    + list.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(want && list.some(n=>n===want)) sel.value=want;
+  document.getElementById('login-name-label').textContent =
+    LOGIN_ROLE==='admin' ? 'Admin name' : 'Your name';
+}
+
 function setLoginRole(role){
   LOGIN_ROLE = role==='admin' ? 'admin' : 'member';
   document.getElementById('seg-member').setAttribute('aria-selected', String(LOGIN_ROLE==='member'));
   document.getElementById('seg-admin') .setAttribute('aria-selected', String(LOGIN_ROLE==='admin'));
-  document.getElementById('fld-name').style.display = LOGIN_ROLE==='admin' ? 'none' : '';
+  fillNameSelect();
   clearLoginErr();
   document.getElementById('login-pw').focus();
 }
@@ -1699,19 +1901,20 @@ async function showLogin(){
   // than showing an empty box that looks broken.
   sel.innerHTML='<option value="">Loading names…</option>';
   sel.disabled=true;
-  let names=[], failed=false;
+  let failed=false;
   try{
     const r=await callServer('getVrms');
-    names=(r&&r.vrms)||[];
-    if(!names.length) failed=true;
+    LOGIN_VRMS   = (r&&r.vrms)   || [];
+    LOGIN_ADMINS = (r&&r.admins) || [];
+    ADMIN_NAMES_LIST = LOGIN_ADMINS.slice();
+    if(!LOGIN_VRMS.length) failed=true;
   }catch(e){ failed=true; }
   sel.disabled=false;
-  sel.innerHTML='<option value="">— Select your name —</option>'
-    + names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
   // restore the last person who signed in on this browser
   let saved=''; try{saved=localStorage.getItem('vrm_user')||'';}catch(e){}
-  if(saved==='Admin'){ setLoginRole('admin'); }
-  else { setLoginRole('member'); if(saved) sel.value=saved; }
+  const wasAdmin = saved && LOGIN_ADMINS.some(a=>a===saved);
+  setLoginRole(wasAdmin?'admin':'member');       // calls fillNameSelect()
+  fillNameSelect(saved);
   // after setLoginRole (it clears the error banner)
   if(failed) loginErr('Couldn’t load the VRM list. Check your connection, then reload the page.');
   setTimeout(()=>{document.getElementById('login-pw').focus();},80);
@@ -1719,11 +1922,11 @@ async function showLogin(){
 
 async function doLogin(){
   const isAdminTab = LOGIN_ROLE==='admin';
-  const choice = isAdminTab ? '__ADMIN__' : document.getElementById('login-name').value;
+  const choice = document.getElementById('login-name').value;
   const pw     = document.getElementById('login-pw').value;
   const keep   = document.getElementById('login-remember').checked;
   clearLoginErr();
-  if(!isAdminTab && !choice){ loginErr('Select your name from the list to continue.'); document.getElementById('login-name').focus(); return; }
+  if(!choice){ loginErr(isAdminTab?'Select which admin you are.':'Select your name from the list to continue.'); document.getElementById('login-name').focus(); return; }
   if(!pw){ loginErr('Enter your password.'); document.getElementById('login-pw').focus(); return; }
 
   loginBusy(true);
@@ -1735,7 +1938,7 @@ async function doLogin(){
   if(isAdminTab && role!=='admin'){ loginBusy(false); loginErr('That’s the member password. Admin sign-in needs the admin password.'); document.getElementById('login-pw').select(); return; }
   if(!isAdminTab && role!=='member'){ loginBusy(false); loginErr('That’s the admin password — switch to the Admin tab to use it.'); document.getElementById('login-pw').select(); return; }
 
-  APP_PW=pw; USER_ROLE=role; USER_NAME=(isAdminTab?'Admin':choice);
+  APP_PW=pw; USER_ROLE=role; USER_NAME=choice;
   try{
     localStorage.setItem('vrm_user',USER_NAME);
     if(keep){ localStorage.setItem('vrm_pw',pw); localStorage.setItem('vrm_role',role); sessionStorage.removeItem('vrm_pw'); sessionStorage.removeItem('vrm_role'); }
