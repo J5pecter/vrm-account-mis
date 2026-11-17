@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -66,7 +66,7 @@ ok('SheetJS SRI matches app.js', app.includes(sri), sri);
 const files = execSync('git ls-files', { cwd: root }).toString().split('\n').filter(Boolean).filter((f) => !f.startsWith('vendor/') && !/\.(png|xlsx)$/.test(f) && f !== 'package-lock.json');
 const patterns = [
   [/AKfycb[\w-]{20,}/, 'Apps Script deployment id'],
-  [/d5c09942bbb723bae917476016044f56f8785f2072c6ac8a/, 'legacy API token'],
+  [/API_TOKEN\s*=\s*["'][0-9a-f]{32,}["']/, 'embedded API token'],
   [/docs\.google\.com\/spreadsheets\/d\/[\w-]{20,}/, 'Google Sheet URL'],
   [/(ADMIN|MEMBER)_PASSWORD\s*=\s*['"][^'"]{4,}/, 'hardcoded shared password'],
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'private key'],
@@ -86,8 +86,9 @@ ok('legacy insecure mechanisms removed from frontend (shared password storage, I
 
 // History check (informational for the release notes: secrets that already left the building)
 try {
-  const hist = execSync('git log -p --all -S "d5c09942bbb723bae917476016044f56f8785f2072c6ac8a" --format=%h', { cwd: root }).toString();
-  console.log('INFO legacy token present in git history at commits: ' + ([...new Set(hist.match(/^[0-9a-f]{7}$/gm) || [])].join(' ') || 'none') + ' (must be treated as public; rotate/retire)');
+  const r = spawnSync('git', ['log', '--all', '--format=%h', '-G', 'const API_TOKEN *= *"[0-9a-f]{32,}"', '--', 'index.html'], { cwd: root, encoding: 'utf8' });
+  const commits = [...new Set((r.stdout || '').match(/^[0-9a-f]{7,}$/gm) || [])];
+  console.log('INFO embedded v2 API token added/removed in index.html history at commits: ' + (commits.join(' ') || 'none') + ' (treat as public; retire the v2 deployment)');
 } catch (e) { /* not a git checkout */ }
 
 console.log(failures.length ? `\n${failures.length} check(s) FAILED` : '\nAll static checks passed');
