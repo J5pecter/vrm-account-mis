@@ -1,0 +1,34 @@
+commit 3f9e75d · 2026-11-17T09:34:02Z · node v24.21.0 · Windows 11
+PASS syntax assets/js/app.js
+PASS syntax assets/js/api.js
+PASS syntax assets/js/core.js
+PASS syntax assets/js/theme-init.js
+PASS syntax config.js
+PASS syntax scripts/dev-server.mjs
+PASS syntax scripts/migrate-legacy.mjs
+PASS syntax scripts/reconcile.mjs
+PASS syntax backend/Code.gs
+PASS backend/Code.gs is pure ASCII
+PASS data-action: every hook has a handler (52 hooks)
+PASS data-action: no orphaned handlers
+PASS data-submit: every hook has a handler (10 hooks)
+PASS data-submit: no orphaned handlers
+PASS data-change: every hook has a handler (10 hooks)
+PASS data-change: no orphaned handlers
+PASS data-input: every hook has a handler (1 hooks)
+PASS data-input: no orphaned handlers
+PASS index.html hooks have handlers
+PASS index.html has a Content-Security-Policy
+PASS index.html has no inline <script> bodies
+PASS index.html has no inline event handler attributes
+PASS index.html has no inline style attributes
+PASS assets/js/app.js has no inline event handler attributes
+PASS assets/js/app.js has no inline style attributes
+PASS no eval / new Function in frontend
+PASS SheetJS SRI matches app.js
+PASS no secrets or deployment identifiers in tracked files
+PASS config.js has no real backend URL committed
+PASS legacy insecure mechanisms removed from frontend (shared password storage, IP lookup, static token)
+INFO embedded v2 API token added/removed in index.html history at commits: 40a4609 ba31bdb (treat as public; retire the v2 deployment)
+
+All static checks passed
