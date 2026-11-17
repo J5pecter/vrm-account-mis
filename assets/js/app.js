@@ -1316,7 +1316,18 @@
     if (M.tab === 'aliases' && !M.aliases) loadAliases();
   }
   function loadUsers() { Api.call('listUsers').then(function (d) { S.ui.manage.users = d.users; }, function (e) { S.ui.manage.error = errMsg(e); }).then(renderManageBody); }
-  function loadAliases() { Api.call('listAliases').then(function (d) { S.ui.manage.aliases = d.aliases; }, function (e) { S.ui.manage.error = errMsg(e); }).then(renderManageBody); }
+  function loadAliases() {
+    Api.call('listAliases').then(function (d) { S.ui.manage.aliases = d.aliases; }, function (e) { S.ui.manage.error = errMsg(e); }).then(function () {
+      // Refresh only the list so text typed into the add-alias form while loading is never wiped.
+      var list = $('#alias-list');
+      if (list && S.ui.manage.tab === 'aliases' && !S.ui.manage.error) { list.innerHTML = aliasListHtml(); applyStyles(list); } else renderManageBody();
+    });
+  }
+  function aliasListHtml() {
+    var M = S.ui.manage;
+    return !M.aliases ? '<div class="loading-row" role="status">Loading aliases…</div>' : M.aliases.length ? '<div class="table-scroll short"><table><thead><tr><th scope="col">Alias</th><th scope="col">VRM</th><th scope="col"></th></tr></thead><tbody>' +
+      M.aliases.slice().sort(function (a, b) { return a.alias.localeCompare(b.alias); }).map(function (a) { return '<tr><td>' + h(a.alias) + '</td><td>' + h(a.vrmName) + '</td><td><button type="button" class="btn ghost mini" data-action="alias-remove" data-key="' + h(a.aliasKey) + '" data-label="' + h(a.alias) + '">Remove</button></td></tr>'; }).join('') + '</tbody></table></div>' : empty('No aliases yet.');
+  }
   function renderManageBody() {
     var box = $('#manage-body'), M = S.ui.manage;
     if (!box) return;
@@ -1336,8 +1347,7 @@
       html += '<div class="card card-pad"><form id="alias-add" data-submit="alias-add" novalidate><div class="fields"><div class="field"><label for="al-name">Alias (spelling found in files)</label><input id="al-name" name="alias" autocomplete="off" maxlength="120" placeholder="e.g. swarnarekha shetty"></div>' +
         '<div class="field"><label for="al-vrm">Maps to VRM</label><select id="al-vrm" name="vrmId">' + vrmOptions('', { activeOnly: true, placeholder: '— Choose a VRM —' }) + '</select></div><div class="field"><button type="submit" class="btn">' + svg('plus') + 'Add alias</button></div></div>' +
         '<p class="hint">Matching ignores case and extra spaces. An alias can never equal a VRM name or point to two VRMs.</p></form></div>';
-      html += '<div class="card">' + (!M.aliases ? '<div class="loading-row" role="status">Loading aliases…</div>' : M.aliases.length ? '<div class="table-scroll short"><table><thead><tr><th scope="col">Alias</th><th scope="col">VRM</th><th scope="col"></th></tr></thead><tbody>' +
-        M.aliases.slice().sort(function (a, b) { return a.alias.localeCompare(b.alias); }).map(function (a) { return '<tr><td>' + h(a.alias) + '</td><td>' + h(a.vrmName) + '</td><td><button type="button" class="btn ghost mini" data-action="alias-remove" data-key="' + h(a.aliasKey) + '" data-label="' + h(a.alias) + '">Remove</button></td></tr>'; }).join('') + '</tbody></table></div>' : empty('No aliases yet.')) + '</div>';
+      html += '<div class="card" id="alias-list">' + aliasListHtml() + '</div>';
     } else {
       html += '<div class="actions"><button type="button" class="btn" data-action="user-create">' + svg('plus') + 'Create account</button><span class="hint">Every person signs in with their own account. New and reset passwords are temporary and must be changed at first sign-in.</span></div><div class="divider"></div>';
       html += '<div class="card">' + (!M.users ? '<div class="loading-row" role="status">Loading accounts…</div>' : '<div class="table-scroll"><table><thead><tr><th scope="col">Name</th><th scope="col">Role</th><th scope="col">Linked VRM</th><th scope="col">State</th><th scope="col" class="hide-sm">Last sign-in</th><th scope="col">Actions</th></tr></thead><tbody>' +
@@ -1841,7 +1851,7 @@
       var alias = C.displayName(fval(form, 'alias')), vrmId = fval(form, 'vrmId'), btn = $('button[type="submit"]', form);
       if (!alias || !vrmId) { toast('Enter the alias and choose a VRM.', 'warn'); return; }
       busy(btn, true);
-      Api.call('addAlias', { alias: alias, vrmId: vrmId }, { requestId: C.uuid() }).then(function (d) { toast(d.alreadyExists ? 'That alias already exists.' : 'Alias added.', 'ok'); loadAliases(); }, function (e) { toast(errMsg(e), 'err'); busy(btn, false); });
+      Api.call('addAlias', { alias: alias, vrmId: vrmId }, { requestId: C.uuid() }).then(function (d) { toast(d.alreadyExists ? 'That alias already exists.' : 'Alias added.', 'ok'); form.reset(); busy(btn, false); loadAliases(); }, function (e) { toast(errMsg(e), 'err'); busy(btn, false); });
     }
   };
 
