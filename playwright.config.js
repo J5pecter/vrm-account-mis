@@ -18,10 +18,16 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure'
   },
-  webServer: {
+  webServer: [{
     command: `node scripts/dev-server.mjs --port ${PORT} --fresh --test-hooks --data .local/e2e.json`,
     url: `http://127.0.0.1:${PORT}/exec`,
     reuseExistingServer: false,
     timeout: 120000
-  }
+  }, {
+    // Separate server with synthetic demo data for responsive checks and screenshots.
+    command: 'node scripts/dev-server.mjs --port 8789 --fresh --demo --data .local/demo.json',
+    url: 'http://127.0.0.1:8789/exec',
+    reuseExistingServer: false,
+    timeout: 180000
+  }]
 });
