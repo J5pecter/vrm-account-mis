@@ -5,3 +5,5 @@ playwright-report/
 *.log
 .claude/
 !docs/evidence/*.log
+.clasp.json
+.clasprc.json

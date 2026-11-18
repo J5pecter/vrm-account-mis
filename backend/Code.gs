@@ -1543,6 +1543,12 @@ function checkDateShape_(s) {
  */
 function setup() {
   REQ_ = newReq_();
+  var boundProps = PropertiesService.getScriptProperties();
+  if (!boundProps.getProperty('SPREADSHEET_ID') && SpreadsheetApp.getActiveSpreadsheet) {
+    // Script created inside its Sheet (clasp create --type sheets): use that Sheet as the database.
+    var active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) boundProps.setProperty('SPREADSHEET_ID', active.getId());
+  }
   var ss = ss_();
   Object.keys(SCHEMA).forEach(function (name) {
     var s = ss.getSheetByName(name) || ss.insertSheet(name), heads = SCHEMA[name];
@@ -1586,53 +1592,125 @@ function setup() {
 }
 
 /**
+ * Create or reset one account with a temporary password (must be changed at first sign-in).
+ * Used by the Sheet menu and by provisionUserFromProperties(). Returns the account name.
+ */
+function provisionAccount_(rawName, rawRole, rawVrm, pw) {
+  REQ_ = newReq_();
+  var name = validatePersonName_(rawName, 'Name');
+  var role = clean_(rawRole).toLowerCase();
+  var vrmName = clean_(rawVrm);
+  var vrmId = '';
+  if (vrmName) {
+    var v = resolveVrmName_(vrmName);
+    if (!v) throw new Error('VRM "' + vrmName + '" is not on the roster.');
+    vrmId = v.id;
+  }
+  checkRoleAssignment_(role, vrmId);
+  checkPasswordPolicy_(pw, name);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    REQ_.cache = {};
+    var f = setPasswordFields_(pw);
+    var existing = rows_('Users').filter(function (u) { return u.name_key === nameKey_(name); })[0];
+    var actor = { id: 'setup', name: 'setup', role: 'system' };
+    if (existing) {
+      update_('Users', existing, { role: role, assigned_vrm_id: vrmId, active: 'true', pw_algo: f.pw_algo, salt: f.salt,
+        password_hash: f.password_hash, password_changed_at: f.password_changed_at, must_change_password: 'true',
+        failed_count: 0, locked_until: '', updated_at: nowIso_(), updated_by: 'setup' });
+      revokeUserSessions_(existing.id, 'password_reset', '');
+      audit_(actor, 'provisionUser', { entityType: 'user', entityId: existing.id, detail: 'Reset by script operator' });
+    } else {
+      var id = uuid_();
+      append_('Users', [{ id: id, name: name, name_key: nameKey_(name), role: role, assigned_vrm_id: vrmId, active: 'true',
+        pw_algo: f.pw_algo, salt: f.salt, password_hash: f.password_hash, must_change_password: 'true', failed_count: 0,
+        locked_until: '', created_at: nowIso_(), created_by: 'setup', updated_at: nowIso_(), updated_by: 'setup',
+        password_changed_at: f.password_changed_at, last_login_at: '' }]);
+      audit_(actor, 'provisionUser', { entityType: 'user', entityId: id, detail: 'Created by script operator as ' + role });
+    }
+    SpreadsheetApp.flush();
+  } finally { lock.releaseLock(); }
+  return name;
+}
+
+/**
  * Provision or reset one account from temporary Script Properties, then delete them:
  *   SETUP_NAME, SETUP_PASSWORD (12+ chars), SETUP_ROLE (admin|member|reviewer), SETUP_VRM (canonical VRM name, optional for admin).
- * The account must change the password at first sign-in.
+ * The account must change the password at first sign-in. (The Sheet menu is the simpler route.)
  */
 function provisionUserFromProperties() {
-  REQ_ = newReq_();
   var props = PropertiesService.getScriptProperties();
   try {
-    var name = validatePersonName_(props.getProperty('SETUP_NAME'), 'SETUP_NAME');
-    var pw = props.getProperty('SETUP_PASSWORD') || '';
-    var role = clean_(props.getProperty('SETUP_ROLE'));
-    var vrmName = clean_(props.getProperty('SETUP_VRM'));
-    var vrmId = '';
-    if (vrmName) {
-      var v = resolveVrmName_(vrmName);
-      if (!v) throw new Error('SETUP_VRM is not on the roster');
-      vrmId = v.id;
-    }
-    checkRoleAssignment_(role, vrmId);
-    checkPasswordPolicy_(pw, name);
-    var lock = LockService.getScriptLock();
-    lock.waitLock(30000);
-    try {
-      REQ_.cache = {};
-      var f = setPasswordFields_(pw);
-      var existing = rows_('Users').filter(function (u) { return u.name_key === nameKey_(name); })[0];
-      var actor = { id: 'setup', name: 'setup', role: 'system' };
-      if (existing) {
-        update_('Users', existing, { role: role, assigned_vrm_id: vrmId, active: 'true', pw_algo: f.pw_algo, salt: f.salt,
-          password_hash: f.password_hash, password_changed_at: f.password_changed_at, must_change_password: 'true',
-          failed_count: 0, locked_until: '', updated_at: nowIso_(), updated_by: 'setup' });
-        revokeUserSessions_(existing.id, 'password_reset', '');
-        audit_(actor, 'provisionUser', { entityType: 'user', entityId: existing.id, detail: 'Reset by script operator' });
-      } else {
-        var id = uuid_();
-        append_('Users', [{ id: id, name: name, name_key: nameKey_(name), role: role, assigned_vrm_id: vrmId, active: 'true',
-          pw_algo: f.pw_algo, salt: f.salt, password_hash: f.password_hash, must_change_password: 'true', failed_count: 0,
-          locked_until: '', created_at: nowIso_(), created_by: 'setup', updated_at: nowIso_(), updated_by: 'setup',
-          password_changed_at: f.password_changed_at, last_login_at: '' }]);
-        audit_(actor, 'provisionUser', { entityType: 'user', entityId: id, detail: 'Created by script operator as ' + role });
-      }
-      SpreadsheetApp.flush();
-    } finally { lock.releaseLock(); }
-    Logger.log('Provisioned ' + name + ' (' + role + '). Temporary password must be changed at first sign-in.');
+    var name = provisionAccount_(props.getProperty('SETUP_NAME'), props.getProperty('SETUP_ROLE'), props.getProperty('SETUP_VRM'), props.getProperty('SETUP_PASSWORD') || '');
+    Logger.log('Provisioned ' + name + '. Temporary password must be changed at first sign-in.');
   } finally {
     ['SETUP_NAME', 'SETUP_PASSWORD', 'SETUP_ROLE', 'SETUP_VRM'].forEach(function (k) { props.deleteProperty(k); });
   }
+}
+
+/** Random temporary password (16 chars, unambiguous alphabet) from the platform's secure UUID generator. */
+function tempPassword_() {
+  var alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789-!@#%';
+  var hex = (uuid_() + uuid_()).replace(/-/g, '');
+  var out = '';
+  for (var i = 0; i < 16; i++) out += alpha[parseInt(hex.substr(i * 2, 2), 16) % alpha.length];
+  return out;
+}
+
+/* ===================================================================== */
+/* Sheet menu (owner tools; runs as the person who opened the Sheet)     */
+/* ===================================================================== */
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('VRM MIS')
+    .addItem('1. Set up / verify database', 'menuSetup')
+    .addItem('2. Create or reset an account...', 'menuProvision')
+    .addSeparator()
+    .addItem('Run integrity check', 'menuIntegrity')
+    .addItem('Back up now', 'menuBackup')
+    .addItem('Install daily backup and maintenance', 'menuInstallTriggers')
+    .addToUi();
+}
+function menuSetup() {
+  setup();
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('VRM MIS', 'Database ready. Next: VRM MIS > Create or reset an account (start with yourself as admin).', ui.ButtonSet.OK);
+}
+function menuProvision() {
+  var ui = SpreadsheetApp.getUi();
+  var ask = function (title, prompt) {
+    var r = ui.prompt(title, prompt, ui.ButtonSet.OK_CANCEL);
+    if (r.getSelectedButton() !== ui.Button.OK) throw new Error('cancelled');
+    return r.getResponseText();
+  };
+  try {
+    var name = ask('Account - name', 'Full name used to sign in (e.g. Lavina Saldanha):');
+    var role = ask('Account - role', 'Type one: admin, member or reviewer');
+    var vrm = ask('Account - linked VRM', 'Canonical VRM name for a member (or an admin who is also a VRM). Leave blank for none.');
+    var pw = tempPassword_();
+    var done = provisionAccount_(name, role, vrm, pw);
+    ui.alert('Temporary password for ' + done, pw + '\n\nGive it to ' + done + ' privately. It is not stored anywhere and will not be shown again. ' +
+      'They must choose a new password at first sign-in. Any existing sessions for this account were signed out.', ui.ButtonSet.OK);
+  } catch (e) {
+    if (String(e.message) !== 'cancelled') ui.alert('Account not created', String(e.message), ui.ButtonSet.OK);
+  }
+}
+function menuIntegrity() {
+  var r = verifyIntegrity();
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('Integrity check', (r.ok ? 'All checks passed.' : 'PROBLEMS FOUND - see the execution log.') + '\nActive entries: ' + r.active +
+    '\nDeleted (tombstones): ' + r.deleted + '\nDuplicate code keys: ' + r.duplicateCodeKeys + '\nOrphan entries: ' + r.orphanEntries, ui.ButtonSet.OK);
+}
+function menuBackup() {
+  var id = backupNow();
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('Backup created', 'Copy saved in Google Drive (file id ' + id + ').', ui.ButtonSet.OK);
+}
+function menuInstallTriggers() {
+  installTriggers();
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('Scheduled', 'Daily backup at 01:00 IST and hourly housekeeping are installed.', ui.ButtonSet.OK);
 }
 
 /** Housekeeping: drop long-expired sessions and old idempotency records. Never touches business data. */
