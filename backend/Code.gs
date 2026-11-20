@@ -21,7 +21,7 @@
  */
 
 var APP = {
-  VERSION: '3.0.0',
+  VERSION: '3.1.0',
   API_VERSION: 3,
   SCHEMA_VERSION: 3,
   TZ: 'Asia/Kolkata',
