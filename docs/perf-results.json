@@ -1,0 +1,127 @@
+{
+  "environment": "local emulator (Node v24.21.0, win32)",
+  "note": "Algorithmic cost only; not Google Apps Script latency.",
+  "measuredAt": "2026-11-17T09:11:06.249Z",
+  "results": [
+    {
+      "entries": 10000,
+      "bulkLoadSeconds": 1.1,
+      "getData": {
+        "p50": 53.6,
+        "p95": 76.2,
+        "ok": true
+      },
+      "addEntries100": {
+        "p50": 54.5,
+        "p95": 61.6,
+        "ok": true
+      },
+      "commitImport1500": {
+        "p50": 167.7,
+        "p95": 174.1,
+        "ok": true
+      },
+      "queryEntriesPage": {
+        "p50": 137.4,
+        "p95": 181.4,
+        "ok": true
+      },
+      "lookup100": {
+        "p50": 157.1,
+        "p95": 197.7,
+        "ok": true
+      },
+      "exportYear": {
+        "p50": 192,
+        "p95": 207.6,
+        "ok": true
+      },
+      "integrity": {
+        "p50": 260.5,
+        "p95": 366.8,
+        "ok": true
+      },
+      "sheetCells": 240000
+    },
+    {
+      "entries": 25000,
+      "bulkLoadSeconds": 7.6,
+      "getData": {
+        "p50": 335.6,
+        "p95": 437.9,
+        "ok": true
+      },
+      "addEntries100": {
+        "p50": 362.2,
+        "p95": 442.3,
+        "ok": true
+      },
+      "commitImport1500": {
+        "p50": 612.5,
+        "p95": 637.4,
+        "ok": true
+      },
+      "queryEntriesPage": {
+        "p50": 378.5,
+        "p95": 433.5,
+        "ok": true
+      },
+      "lookup100": {
+        "p50": 333.3,
+        "p95": 427.8,
+        "ok": true
+      },
+      "exportYear": {
+        "p50": 368.9,
+        "p95": 465.4,
+        "ok": true
+      },
+      "integrity": {
+        "p50": 422.1,
+        "p95": 499.5,
+        "ok": true
+      },
+      "sheetCells": 480000
+    },
+    {
+      "entries": 50000,
+      "bulkLoadSeconds": 20.9,
+      "getData": {
+        "p50": 696.1,
+        "p95": 827.3,
+        "ok": true
+      },
+      "addEntries100": {
+        "p50": 586.2,
+        "p95": 723.2,
+        "ok": true
+      },
+      "commitImport1500": {
+        "p50": 990,
+        "p95": 1009.6,
+        "ok": true
+      },
+      "queryEntriesPage": {
+        "p50": 654.6,
+        "p95": 770.6,
+        "ok": true
+      },
+      "lookup100": {
+        "p50": 606.7,
+        "p95": 652.9,
+        "ok": true
+      },
+      "exportYear": {
+        "p50": 740.8,
+        "p95": 751.7,
+        "ok": true
+      },
+      "integrity": {
+        "p50": 777.3,
+        "p95": 843.7,
+        "ok": true
+      },
+      "sheetCells": 880000
+    }
+  ]
+}

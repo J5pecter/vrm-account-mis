@@ -1,0 +1,23 @@
+{
+  "name": "vrm-account-mis",
+  "version": "3.0.0",
+  "private": true,
+  "description": "VRM Account MIS - client-code activation tracking dashboard (static frontend + Google Apps Script backend)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs --demo",
+    "test": "npm run test:unit && npm run test:backend",
+    "test:unit": "node --test \"tests/unit/*.test.mjs\"",
+    "test:backend": "node --test --test-concurrency=4 \"tests/backend/*.test.mjs\"",
+    "test:e2e": "playwright test",
+    "test:perf": "node tests/perf/perf.mjs",
+    "check": "node scripts/check.mjs",
+    "ci": "npm run check && npm test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.1"
+  }
+}

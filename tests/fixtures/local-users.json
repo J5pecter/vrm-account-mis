@@ -1,0 +1,10 @@
+[
+  { "name": "Jayesh Mahajan", "role": "admin", "vrm": "", "password": "Local-admin-pass-01" },
+  { "name": "Lavina Saldanha", "role": "admin", "vrm": "Lavina Saldanha", "password": "Local-admin-pass-02" },
+  { "name": "Rajashri Mohandas", "role": "admin", "vrm": "Rajashri Mohandas", "password": "Local-admin-pass-03" },
+  { "name": "Parth Sharma", "role": "member", "vrm": "Parth Sharma", "password": "Local-member-pass-01" },
+  { "name": "Khushi Dodiya", "role": "member", "vrm": "Khushi Dodiya", "password": "Local-member-pass-02" },
+  { "name": "Pavan Soni", "role": "member", "vrm": "Pavan Soni", "password": "Local-member-pass-03" },
+  { "name": "Riya Reviewer", "role": "reviewer", "vrm": "", "password": "Local-review-pass-01" },
+  { "name": "Swarna Shetty", "role": "member", "vrm": "Swarna Shetty", "password": "Local-member-pass-04", "mustChangePassword": true }
+]

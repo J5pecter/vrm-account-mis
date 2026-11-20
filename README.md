@@ -1,237 +1,93 @@
-# VRM Account MIS
+# VRM Account MIS (v3)
 
-A team dashboard to track daily account openings (client-code activations) per
-Relationship Manager (VRM), with a **Google Sheet as the database**.
+Daily MIS for **client-code activations** per Virtual Relationship Manager (VRM): record and import client codes,
+reconcile team totals, review reporting status and audit every change.
 
-The app is split into two pieces so it can be **hosted on Git (GitHub Pages)**:
+> **Status (20 Nov 2026): v3 live** at https://j5pecter.github.io/vrm-account-mis/ on a new Apps Script backend and private Sheet
+> owned by the repository owner. Switched by the owner's decision **without migrating v2 history** (the v2 Sheet is untouched and can
+> be imported later with `scripts/migrate-legacy.mjs`). Open items: [docs/12 §8 and §10](docs/12_TRACEABILITY_AND_TEST_RESULTS.md).
 
 ```
-┌────────────────────────┐        fetch (JSON)        ┌───────────────────────────┐
-│  Static frontend        │  ───────────────────────▶ │  Google Apps Script        │
-│  index.html             │                            │  Web App = JSON API        │
-│  (GitHub Pages / any    │  ◀─────────────────────── │  (backend/Code.gs)         │
-│   static host)          │        { vrms, entries }   │        │                   │
-└────────────────────────┘                            └────────┼───────────────────┘
-                                                                ▼
-                                                        ┌───────────────┐
-                                                        │ Google Sheet   │  ← the database
-                                                        │ VRMs · Entries │
-                                                        └───────────────┘
+Browser ──HTTPS──▶ GitHub Pages (this repo: static UI, no secrets)
+                        │  POST text/plain JSON (session token in body)
+                        ▼
+              Google Apps Script Web App (backend/Code.gs)
+              auth · RBAC · validation · LockService · idempotency · audit
+                        │
+                        ▼
+              Private Google Sheet (VRMs, Entries, Users, Sessions, Aliases,
+              ImportBatches, AuditEvents, ZeroReports, IdempotencyRequests, Meta)
 ```
 
-- **Frontend** — `index.html`: a single self-contained file (HTML + CSS + JS, SheetJS from
-  CDN for import/export). No build step. Deployable to GitHub Pages, Netlify, S3, anywhere.
-- **Backend** — `backend/Code.gs`: a Google Apps Script Web App exposing a small JSON API.
-  The Google Sheet it's bound to is the database. Tabs + seed data are created automatically.
-
----
+## What “activation” means
+One **distinct, accepted client code** recorded for a VRM and activation date. Codes are globally unique across all VRMs,
+dates and imports (case-insensitive, Unicode-normalised, leading zeros kept). It is an operational proxy for “account opened”;
+it is **not** verified against back-office account opening. There is no manual “count” entry.
 
 ## Repository layout
+| Path | Purpose |
+|---|---|
+| `index.html`, `config.js`, `assets/` | Static frontend (no build step). `config.js` holds the public API URL only. |
+| `assets/js/core.js` | Shared domain rules: code normalisation, IST dates, period filter, metric engine, import parsing, CSV escaping. |
+| `assets/js/api.js`, `assets/js/app.js` | Session-token API client and the UI. |
+| `vendor/xlsx-0.20.3.full.min.js` | Pinned, self-hosted SheetJS (loaded on demand with Subresource Integrity). |
+| `backend/Code.gs`, `backend/appsscript.json` | Apps Script API v3 (source contains no credentials or IDs). |
+| `templates/` | Fictional import templates. |
+| `scripts/` | Local emulator server, legacy migration, reconciliation, static checks. |
+| `tests/` | Unit, backend (emulator), migration, E2E (Playwright + Edge), performance. |
+| `docs/` | Workflow, architecture, PRD, TRD, QA, runbook, API, data dictionary, threat model, migration, release notes, evidence. |
 
-| Path                     | What it is                                                     |
-|--------------------------|---------------------------------------------------------------|
-| `index.html`             | The whole frontend (served as a static file).                 |
-| `backend/Code.gs`        | Apps Script JSON API (`doGet`/`doPost` + all data operations). |
-| `backend/appsscript.json`| Apps Script manifest (timezone + web-app access).             |
-| `sample-import.csv`      | Example import layout (`VRM, Date, Client Code`).             |
-| `README.md`              | This file.                                                    |
+## Roles (enforced on the server)
+| Role | Can |
+|---|---|
+| **Member (VRM)** | Record, import and file zero reports for **their own** VRM only; read team MIS (configurable to own-only). |
+| **Admin** | Everything above for any VRM; roster (add/rename/archive/restore), aliases, user accounts, corrections, soft delete/restore, activity log. An admin may also be linked to a VRM. |
+| **Reviewer** | Read-only: dashboards, MIS, exports, ledger, activity log. |
 
----
+Every person has an individual account (name + password, PBKDF2-HMAC-SHA256 with a server-side pepper). Shared passwords are gone.
 
-## Part 1 — Deploy the backend (Google Apps Script + Sheet)  ~5 min
-
-1. **Create the Sheet.** Go to [sheets.google.com](https://sheets.google.com) → **Blank**
-   spreadsheet → rename it **VRM Account MIS**. (No tabs/headers needed — created on first run.)
-2. **Open Apps Script.** In the Sheet: **Extensions → Apps Script**.
-3. **Paste the code.** Replace the default `Code.gs` contents with all of
-   [`backend/Code.gs`](backend/Code.gs). Save (`Ctrl+S`).
-4. **Set the manifest.** ⚙ **Project Settings** → tick *Show `appsscript.json` in editor* →
-   back in the editor, replace `appsscript.json` with [`backend/appsscript.json`](backend/appsscript.json). Save.
-5. **Deploy.** **Deploy → New deployment** → type **Web app**:
-   - **Execute as:** *Me*
-   - **Who has access:** ***Anyone*** (required — the static site calls it without a Google
-     login). See *Security* below to lock it down.
-   - **Deploy** → **Authorize access** → choose your account → *Advanced* →
-     *Go to VRM Account MIS (unsafe)* → **Allow**.
-6. **Copy the Web app URL** ending in **`/exec`**. This is your API endpoint.
-7. **Test it:** open `<your-/exec-URL>?action=getData` in a browser — you should see JSON with
-   the seven seeded VRMs.
-
-## Part 2 — Host the frontend on GitHub Pages
-
-1. **Create a repo** on GitHub (e.g. `vrm-account-mis`) and push this folder (see
-   *Push to GitHub* below).
-2. **Wire the backend URL** — two options:
-   - **Recommended (team-wide):** open `index.html`, set
-     `const API_URL_HARDCODED = "https://script.google.com/macros/s/…/exec";` near the top of
-     the `<script>`, commit & push. Everyone then uses it with zero setup.
-   - **Per-browser:** leave it blank — on first open the app shows a *Connect your data
-     backend* screen; paste the `/exec` URL once and it's saved in that browser.
-3. **Enable Pages:** repo **Settings → Pages → Build and deployment → Source: Deploy from a
-   branch → Branch: `main` / `(root)` → Save.** After a minute your site is live at
-   `https://<user>.github.io/<repo>/`.
-4. Open the Pages URL — the sidebar shows **● Synced to Google Sheets** when connected.
-
-### Push to GitHub (from this folder)
-The repo is already initialised and committed locally. Add your remote and push:
-
+## Run locally (no Google account needed)
+Requires Node 20+.
 ```bash
-git remote add origin https://github.com/<your-username>/vrm-account-mis.git
-git branch -M main
-git push -u origin main
+npm install
+npm run dev
 ```
+Then open http://127.0.0.1:8787 and sign in with an account from `tests/fixtures/local-users.json`
+(fictional people, test-only passwords). `npm run dev` serves the UI and runs `backend/Code.gs` in a local
+Apps Script **emulator** with synthetic demo data. It is not Google infrastructure.
 
----
+## Tests
+```bash
+npm run check
+```
+```bash
+npm test
+```
+```bash
+npx playwright test
+```
+```bash
+npm run test:perf
+```
+`check` = static release checks (syntax, handler coverage, CSP rules, SRI, secret scan). `npm test` = unit + backend + migration
+tests in the emulator. Playwright runs the browser E2E suite with the installed Microsoft Edge (`PW_CHANNEL=chrome` for Chrome).
 
-## Using the dashboard
-- **Signing in** — the app is gated by a full-screen **Sign in** screen (brand panel on the left,
-  form on the right; it collapses to the form alone on narrow screens). You pick a tab —
-  **Team member** or **Admin** — and enter the matching password:
-  - *Team member* asks **which VRM you are**, chosen from the live dropdown of names in the
-    Sheet (no free typing, so the log can never carry a misspelt name). The form remembers your
-    last selection in that browser.
-  - *Admin* asks **which admin you are** — the same dropdown, switched to the admin roster
-    (Lavina, Rajashri, Jayesh). Admins sign in as themselves, so the activity log names a
-    person rather than a generic "Admin".
+## Deploying
+Follow [docs/06_DEPLOYMENT_RUNBOOK.md](docs/06_DEPLOYMENT_RUNBOOK.md): new private staging Sheet → Apps Script → `setup()` →
+provision accounts → deploy Web App → set `config.js` `apiUrl` on a staging copy → run the staging checklist → migrate with
+`scripts/migrate-legacy.mjs` + `scripts/reconcile.mjs` → approvals → cut over. **Do not point this frontend at the legacy v2
+backend, and do not deploy the v3 backend over the production Sheet.**
 
-  The screen validates before and after the call: missing name, missing password, wrong password,
-  server unreachable, and **using the wrong tab for the password you hold** each get their own
-  inline message. Extras: a **show/hide** eye on the password box, a **Caps Lock is on** warning,
-  a spinner + disabled form while signing in, and a theme toggle so you can switch light/dark
-  before you're even in. **Keep me signed in** (on by default) stores the password in
-  `localStorage`; unticked, it uses `sessionStorage` instead, so closing the tab signs you out.
-  Your name is attached to every change in the activity log. A **Log out** button sits in the
-  sidebar footer and clears both stores. (See *Login & password* below.)
-- **Dashboard** — KPI cards (today / month / year / active VRMs), a **monthly trend chart**
-  (year + VRM filter), the **MIS – VRM wise summary** table ranked by month, a period + VRM +
-  **date-range** filter with Excel/CSV export, an **All data** export, and per-VRM cards.
-- **Analysis & Input** — add / **rename** / remove VRMs; record accounts by pasting one or many
-  client codes (comma / newline separated); **import** Excel/CSV (with **template** downloads);
-  a **client-code lookup** that shows which VRM already owns a code; and a searchable entries
-  table.
-- **Admin overview** *(admins only)* — the desk-management view. It deliberately does **not**
-  restate the dashboard totals; it answers *who still owes me numbers today*:
-  **today's reporting** (every VRM with their count and a Filed / Not yet pill, the outstanding
-  ones listed first), the **month leaderboard** with each VRM's share of the desk, a
-  **team & access** roster showing who is Admin / Admin + VRM / VRM, and the **last few
-  activity-log entries** inline.
-- **Theme** — **dark is the default** (the fluent.health-style deep navy with a lime accent),
-  regardless of the viewer's OS setting. The sun/moon toggle in the top bar switches to the
-  light treatment, and each person's explicit choice is remembered in their own browser.
-  Clearing a browser's saved choice (or a first-time visitor) returns to the dark default.
-  A live **connection indicator** sits in the sidebar footer.
+## Daily operation
+- VRMs record codes in **Analysis & Input** (or import a file) for the actual activation date; future dates are refused.
+- If a VRM had no activations, they file a **zero report** so the desk shows “Confirmed zero” instead of “Not reported”.
+- Admins check **Admin Overview** each evening: reporting status, import exceptions, corrections and backdated entries,
+  and run **Data health** (integrity check).
+- Mistakes are fixed by an admin in **Client Code Lookup** (correct / delete / restore, each with a reason). Nothing is hard-deleted.
 
-### Import formats (see `sample-import.csv`)
-- **Structured**: columns for **VRM**, **Date**, **Client Code** (headers matched loosely).
-  Dates accept `dd/mm/yyyy`, `yyyy-mm-dd`, or Excel serials. Unknown VRMs are created.
-- **Plain list**: a single column of codes → assigned to the VRM & date selected in the form.
-
-### The team
-Nine relationship managers, seeded in `SEED_VRMS`:
-
-| VRM | | VRM | | VRM |
-|-----|-|-----|-|-----|
-| Riddhi Mistry | | Manisha Mahante | | Parth Sharma |
-| Pavan Soni | | Khushi Dodiya | | Rajashri Mohandas |
-| Swarna Shetty | | Aakansha Baranwal | | Lavina Saldanha |
-
-**Lavina Saldanha**, **Rajashri Mohandas** and **Jayesh Mahajan** are the admins (`ADMIN_NAMES`).
-Lavina and Rajashri are on both lists — they record their own accounts like any VRM, and pick
-the *Admin* tab when they need the management view. Jayesh is admin only: no VRM row, so no
-accounts are ever filed under his name.
-
-### AliasKey — automatic name normalization
-Uploaded files often carry messy or variant VRM names. On import, each row's VRM name is
-resolved through the **`Aliases`** tab in the Google Sheet:
-
-| Column A — Alias (as uploaded) | Column B — Canonical VRM name |
-|--------------------------------|-------------------------------|
-| `pavan lekhraj soni`           | Pavan Soni                    |
-| `swarnarekha divakar shetty`   | Swarna Shetty                 |
-| `manisha hemant mahante`       | Manisha Mahante               |
-| `khushi mahesh dodiya`         | Khushi Dodiya                 |
-| `aakanksha baranwal`           | Aakansha Baranwal             |
-| `parth sharma vijay`           | Parth Sharma                  |
-| …                              | …                             |
-
-The long-form spellings above are the roster's previous names, kept so older uploads still
-file correctly. Matching ignores case and extra spaces. If a row matches an alias, it's filed
-under the canonical name; otherwise the name is used as-is (creating the VRM if new).
-**To add or change mappings, just edit rows in the `Aliases` tab — no redeploy needed.**
-
-### Changing the roster
-Edit `SEED_VRMS` / `ADMIN_NAMES` in `backend/Code.gs`, add any old→new spelling to `ALIAS_SEED`,
-save, then **Run ▸ `reseedVRMs`** once from the editor. It *migrates* rather than wipes: a VRM
-whose old name is in the AliasKey is renamed in place, **every entry filed under the old name
-moves with it**, new `ALIAS_SEED` rows are pushed into the `Aliases` tab, and any name not in
-`SEED_VRMS` is kept as long as it still owns entries. Redeploy afterwards (**New version**) so
-the web app serves the new `ADMIN_NAMES`.
-
----
-
-## The JSON API (reference)
-Base URL = your Apps Script `/exec` URL.
-
-Every call is a `POST` with a plain-text JSON body (no `Content-Type: application/json`, so the
-browser skips the CORS preflight — Apps Script has no `OPTIONS` handler). **Every call except
-`login` must include the password** as `"pw"`, or it returns `{ "error":"Unauthorized" }`.
-
-| Call | Body |
-|------|------|
-| `login` | `{ "action":"login", "pw":"…" }` → `{ "ok":true/false, "role":"admin|member" }` |
-| `getVrms` | `{ "action":"getVrms" }` → `{ "vrms":[…], "admins":[…] }` — **public**, no password (the sign-in dropdowns need it) |
-| `getData` | `{ "action":"getData", "pw":"…" }` → `{ "vrms":[…], "entries":[…], "admins":[…] }` |
-| `addVRM` | `{ "action":"addVRM", "name":"…", "pw":"…" }` |
-| `renameVRM` | `{ "action":"renameVRM", "oldName":"…", "newName":"…", "pw":"…" }` |
-| `deleteVRM` | `{ "action":"deleteVRM", "name":"…", "pw":"…" }` |
-| `addEntries` | `{ "action":"addEntries", "vrm":"…", "date":"yyyy-mm-dd", "codes":["…"], "pw":"…" }` |
-| `deleteEntry` | `{ "action":"deleteEntry", "id":"…", "pw":"…" }` |
-| `importRows` | `{ "action":"importRows", "rows":[{ "vrm":"…","date":"…","clientCode":"…" }], "pw":"…" }` |
-| `getLogs` | `{ "action":"getLogs", "limit":300, "pw":"…" }` |
-
-Writes also carry `"by"` (name) and `"ip"` for the audit log. Every write is guarded by a
-`LockService` lock, and client codes are globally unique (case-insensitive).
-
-## Login & password
-Access is gated by **two shared passwords — one per role**. The API rejects any request that
-doesn't carry a valid password (verified **server-side**, so neither is ever exposed in the
-static site).
-
-| Role | Signs in as | Can do |
-|------|-------------|--------|
-| **Admin** | the “Admin” tab, no name needed | everything: add / rename / remove VRMs, delete entries, read the activity log |
-| **Team member** | the “Team member” tab + their own VRM from the dropdown | record and import accounts **against their own VRM only**; read the dashboard |
-
-The server decides the role purely from the password (`roleOf_`), so the tab you pick is only a
-UI hint — picking Admin with the member password is refused, and vice-versa. Admin-only actions
-are blocked server-side too, not just hidden in the UI.
-
-- **Both passwords are defined once**, in `backend/Code.gs`:
-  ```js
-  const ADMIN_PASSWORD  = '…admin password…';
-  const MEMBER_PASSWORD = '…team password…';
-  ```
-  They are **not stored in this public repository** — share them privately (chat, password
-  manager). Do not commit the literal passwords to this README or any public file.
-- **To change one:** edit it in `Code.gs` → **Deploy → Manage deployments → ✏ Edit →
-  New version → Deploy** (never *New deployment* — that mints a new `/exec` URL). Everyone on
-  that role re-enters the new password at next sign-in.
-- **How it travels:** sent in the request **body over HTTPS**, never in the URL. It's kept in
-  `localStorage` when *Keep me signed in* is ticked, otherwise in `sessionStorage` for that tab
-  only; **Log out** clears both.
-
-> This is a shared-password role gate, not per-user accounts — appropriate for an internal team
-> tool. For verified individual identity you'd switch to a Google-login-restricted deployment.
-
-## Notes
-- Import / export / templates use SheetJS from a CDN → those need internet. Core data flow
-  only needs your Apps Script URL.
-- After editing `backend/Code.gs`, redeploy via **Deploy → Manage deployments → ✏ Edit →
-  New version → Deploy** (the `/exec` URL stays the same).
-- The UI merges **fluent.health** (dark) with **fabric.vc** (typography): deep navy (#051023)
-  surfaces with a lime accent (#BFFF99) and faint editorial gridlines, Inter Tight body text,
-  and an extended bold display face (Archivo) for the wordmark, headings, and KPI numbers.
-  Dark is the default; the light treatment is an opt-in toggle, remembered per browser.
-- `backend/Code.gs` is deliberately **pure ASCII**. Em dashes, arrows and box-drawing characters
-  in comments have been corrupted in transit before (the `\uFFFD` strippers in `normName_` are
-  the scar tissue), so the file avoids non-ASCII entirely.
+## Security notes
+- No passwords, tokens, Sheet IDs or client data in this repository. The old embedded `API_TOKEN` and `/exec` URL remain in git
+  history and must be treated as public: retire the v2 deployment after cutover (see docs/09).
+- Session tokens are random, stored hashed on the server, expire (12 h, or 7 days with “keep me signed in”), time out when idle
+  and are revoked on sign-out, password change, role change or account disable.
+- Strict Content-Security-Policy (no inline script/style), escaped rendering, formula-safe CSV exports, text-typed XLSX codes.
