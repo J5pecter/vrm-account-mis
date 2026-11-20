@@ -118,7 +118,10 @@ const server = http.createServer((req, res) => {
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed', 'text/plain');
   if (p === '/config.js') {
-    return send(res, 200, `window.VRM_CONFIG = { apiUrl: '/exec', environment: 'local-emulator' };\n`, TYPES['.js']);
+    // --api-url <https://script.google.com/.../exec> serves the UI against a real Apps Script deployment instead of the emulator.
+    const remote = val('api-url', '');
+    if (remote && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(remote)) return send(res, 400, 'Invalid --api-url', 'text/plain');
+    return send(res, 200, `window.VRM_CONFIG = { apiUrl: ${JSON.stringify(remote || '/exec')}, environment: ${JSON.stringify(remote ? 'google' : 'local-emulator')} };\n`, TYPES['.js']);
   }
   const rel = p === '/' ? '/index.html' : p;
   if (!ALLOWED.some((re) => re.test(rel))) return send(res, 404, 'Not found', 'text/plain');
