@@ -3,9 +3,9 @@
 Daily MIS for **client-code activations** per Virtual Relationship Manager (VRM): record and import client codes,
 reconcile team totals, review reporting status and audit every change.
 
-> **Status: v3 release candidate on branch `feature/v3-secure-mis` — NOT deployed.**
-> Verified against a local Apps Script emulator only. Google staging, UAT and IT/Security approval are outstanding.
-> See [docs/12_TRACEABILITY_AND_TEST_RESULTS.md](docs/12_TRACEABILITY_AND_TEST_RESULTS.md) for evidence and blockers.
+> **Status (20 Nov 2026): v3 live** at https://j5pecter.github.io/vrm-account-mis/ on a new Apps Script backend and private Sheet
+> owned by the repository owner. Switched by the owner's decision **without migrating v2 history** (the v2 Sheet is untouched and can
+> be imported later with `scripts/migrate-legacy.mjs`). Open items: [docs/12 §8 and §10](docs/12_TRACEABILITY_AND_TEST_RESULTS.md).
 
 ```
 Browser ──HTTPS──▶ GitHub Pages (this repo: static UI, no secrets)

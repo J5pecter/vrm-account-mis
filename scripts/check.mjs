@@ -77,10 +77,11 @@ const hits = [];
 for (const f of files) {
   if (f === 'scripts/check.mjs') continue;
   const s = fs.readFileSync(path.join(root, f), 'utf8');
-  for (const [re, label] of patterns) if (re.test(s)) hits.push(f + ': ' + label);
+  const publicBackendUrl = f === 'config.js'; // the live backend URL is public by design: the browser must call it
+  for (const [re, label] of patterns) if (re.test(s) && !(publicBackendUrl && label === 'Apps Script deployment id')) hits.push(f + ': ' + label);
 }
 ok('no secrets or deployment identifiers in tracked files', hits.length === 0, hits.join('; '));
-ok('config.js has no real backend URL committed', /apiUrl:\s*''/.test(read('config.js')));
+ok('config.js apiUrl is empty or an Apps Script /exec URL', /apiUrl:\s*'(https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec)?'/.test(read('config.js')));
 const leftovers = ['vrm_pw', 'api.ipify.org', 'API_TOKEN'].filter((k) => (app + read('assets/js/api.js')).includes(k) && !(k === 'vrm_pw' && read('assets/js/api.js').includes("LEGACY_KEYS")));
 ok('legacy insecure mechanisms removed from frontend (shared password storage, IP lookup, static token)', leftovers.length === 0, leftovers.join(','));
 

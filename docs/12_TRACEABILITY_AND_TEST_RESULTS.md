@@ -151,7 +151,17 @@ No P0 issue is open in the delivered code. P1 items above are environment/access
 | Product/Ops + IT/Security/Compliance approvals | ✖ not obtained |
 | No unresolved P0 / unapproved P1 | ✖ P1 blockers OI-01/03/04 open |
 
-## 10. Final status: **BLOCKED**
-Engineering deliverables are complete and verified in the local emulator and in Edge. The release cannot become **READY FOR UAT**
-until a Google staging backend exists (OI-03) and cannot be **APPROVED FOR PRODUCTION** until OI-01/OI-04, the business decisions
-(OI-08) and the approvals in §9 are in place. Deployment state: **not deployed**; production site and backend unchanged.
+## 10. Final status: **LIVE (owner decision) — open items remain**
+Engineering deliverables were verified in the local emulator and in Edge (§3). On 20 Nov 2026 the repository owner deployed v3:
+
+| Step | Evidence |
+|---|---|
+| New private Sheet "VRM Account MIS v3 - Database" + bound Apps Script (owner's Google account), manifest with IST and web-app settings | Created with `clasp`; deployment "VRM MIS v3.0.0" (`ANYONE_ANONYMOUS`, executes as owner) confirmed via the Apps Script API |
+| `setup()` via the Sheet menu | 10 tabs, schema 3, 9 VRMs, 7 aliases (read back from the Sheet) |
+| Protocol / security checks against real Google | health, bootstrap, no/fake token → `AUTH_REQUIRED`, v2 client → `CLIENT_UPGRADE_REQUIRED`, malformed JSON → `BAD_REQUEST`, unknown action, unknown-name login → `INVALID_CREDENTIALS`, admin action without sign-in refused — **PASS (Google)** |
+| Real browser → Google (POST → 302 → JSON, cross-origin) | Sign-in page served locally against the Google URL showed the server's answer — **PASS (Edge)** |
+| Owner sign-in + forced password change; 9 team accounts created with correct roles/VRM links | Audit events `login`, `changePassword`, 9 × `createUser` (success) |
+| v2 history | **Not migrated** (owner decision: switch without old data). v2 Sheet untouched; import later via docs/10 |
+
+Still open (unchanged by going live): OI-01/02 (v2 data), OI-04 (rotate v2 shared passwords, archive the v2 deployment), OI-05–09,
+OI-12/13, approvals in §9. Google-side concurrency, latency at volume and the restore drill remain **NOT TESTED**.
