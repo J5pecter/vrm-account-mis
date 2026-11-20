@@ -1,7 +1,7 @@
 // E2E: login -> manual add -> duplicate -> import preview -> import -> filter -> dashboard total -> export -> correction -> audit -> logout -> denied API.
 // Environment: LOCAL EMULATOR (static frontend + backend/Code.gs in the Apps Script emulator), Microsoft Edge.
 import { test, expect } from '@playwright/test';
-import { login, logout, api, currentToken, goRoute, today, daysAgo, XLSX, readDownload, SHOTS, unlabelledControls } from './helpers.js';
+import { login, logout, api, currentToken, goRoute, today, daysAgo, XLSX, readDownload, SHOTS, unlabelledControls, USERS } from './helpers.js';
 import path from 'node:path';
 
 test.describe.configure({ mode: 'serial' });
@@ -48,19 +48,20 @@ test('TC-001/008/009/010/011/014 member records codes: separators, blanks, case 
   await logout(page);
 });
 
-test('TC-012 existing code under another VRM is not added; owner is shown to the team', async () => {
+test('TC-012 existing code under another VRM is not added; the other VRM is not disclosed to a VRM', async () => {
   await login(page, 'Khushi Dodiya');
   await goRoute(page, 'input');
   await page.locator('#in-codes').fill('000123');
   await page.locator('#in-save').click();
   await expect(page.locator('#in-result h4')).toContainText('No new codes saved');
   await expect(page.locator('#in-result')).toContainText('Already recorded');
-  await expect(page.locator('#in-result')).toContainText('Parth Sharma');
+  await expect(page.locator('#in-result')).not.toContainText('Parth Sharma');
   await goRoute(page, 'lookup');
   await page.locator('#lk-codes').fill('000123, NEW-FREE-1');
   await page.locator('#lk-btn').click();
   await expect(page.locator('#lk-results')).toContainText('Already recorded');
   await expect(page.locator('#lk-results')).toContainText('Available');
+  await expect(page.locator('#lk-results')).toContainText('Owner not shown for your role');
   await logout(page);
 });
 
@@ -211,8 +212,10 @@ test('TC-005/036 logout revokes the token server-side; replay fails', async () =
 
 test('TC-006/007 member: admin APIs and other VRMs are refused server-side; admin pages blocked', async () => {
   await login(page, 'Parth Sharma');
-  const vrms = (await api(page, 'getData')).data.vrms;
-  const khushi = vrms.find((v) => v.name === 'Khushi Dodiya').id;
+  // A VRM's own snapshot no longer lists other VRMs, so learn Khushi's id as an admin, then attack as Parth.
+  expect((await api(page, 'getData')).data.vrms.map((v) => v.name)).toEqual(['Parth Sharma']);
+  const adminLogin = await page.evaluate(async (pw) => (await fetch('/exec', { method: 'POST', body: JSON.stringify({ action: 'login', user: 'Jayesh Mahajan', pw }) })).json(), USERS['Jayesh Mahajan'].password);
+  const khushi = (await api(page, 'getData', {}, adminLogin.data.token)).data.vrms.find((v) => v.name === 'Khushi Dodiya').id;
   expect((await api(page, 'addEntries', { vrmId: khushi, date: today(), codes: ['HACK-1'] })).error.code).toBe('FORBIDDEN');
   expect((await api(page, 'addVRM', { name: 'Evil Person' })).error.code).toBe('FORBIDDEN');
   expect((await api(page, 'getLogs')).error.code).toBe('FORBIDDEN');

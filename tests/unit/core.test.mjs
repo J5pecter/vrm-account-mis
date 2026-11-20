@@ -281,3 +281,53 @@ test('chunk splits import rows at the server limit', () => {
 test('esc escapes HTML-significant characters', () => {
   assert.equal(C.esc(`<img src=x onerror="a('b')">\``), '&lt;img src=x onerror=&quot;a(&#39;b&#39;)&quot;&gt;&#96;');
 });
+
+/* ----------------------------- period presets & daily series (v3.1) ----------------------------- */
+test('presetPeriod: this/last month across a year boundary', () => {
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'thisMonth' }, '2026-11-20')), ['2026-11-01', '2026-11-30', 'November 2026']);
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'lastMonth' }, '2026-01-05')), ['2025-12-01', '2025-12-31', 'December 2025']);
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'lastMonth' }, '2024-03-31')), ['2024-02-01', '2024-02-29', 'February 2024']);
+});
+function pick(p) { assert.equal(p.ok, true, p.error); return [p.from, p.to, p.label]; }
+
+test('presetPeriod: Indian financial-year quarters and FY (April to March)', () => {
+  const t = '2026-11-20'; // FY 2026-27
+  assert.equal(C.fyStartYear(t), 2026);
+  assert.equal(C.fyStartYear('2027-03-31'), 2026);
+  assert.equal(C.fyStartYear('2027-04-01'), 2027);
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'q1' }, t)).slice(0, 2), ['2026-04-01', '2026-06-30']);
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'q2' }, t)).slice(0, 2), ['2026-07-01', '2026-09-30']);
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'q3' }, t)).slice(0, 2), ['2026-10-01', '2026-12-31']);
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'q4' }, t)).slice(0, 2), ['2027-01-01', '2027-03-31']);
+  assert.match(C.presetPeriod({ preset: 'q4' }, t).label, /^Q4 FY 2026-27 \(Jan–Mar 2027\)$/);
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'fy', fy: '2025' }, t)).slice(0, 2), ['2025-04-01', '2026-03-31']);
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'q2', fy: 2024 }, t)).slice(0, 2), ['2024-07-01', '2024-09-30']);
+});
+
+test('presetPeriod: all time and custom dates (inclusive, validated)', () => {
+  assert.equal(C.presetPeriod({ preset: 'all' }, '2026-11-20').kind, 'all');
+  assert.deepEqual(pick(C.presetPeriod({ preset: 'custom', from: '2026-11-01', to: '2026-11-05' }, '2026-11-20')).slice(0, 2), ['2026-11-01', '2026-11-05']);
+  assert.equal(C.presetPeriod({ preset: 'custom' }, '2026-11-20').ok, false);
+  assert.equal(C.presetPeriod({ preset: 'custom', from: '2026-11-09', to: '2026-11-01' }, '2026-11-20').ok, false);
+  assert.equal(C.presetPeriod({ preset: 'custom', from: '2026-02-30' }, '2026-11-20').ok, false);
+});
+
+test('fyOptions lists financial years from the first data year to the current one', () => {
+  assert.deepEqual(C.fyOptions([['a', '2025-02-10', 1]], '2026-11-20').map((o) => o.label), ['FY 2026-27', 'FY 2025-26', 'FY 2024-25']);
+  assert.deepEqual(C.fyOptions([], '2026-11-20').map((o) => o.value), ['2026']);
+});
+
+test('dailySeries: every day present, zero days included, scoped to a VRM, never past today', () => {
+  const counts = [['a', '2026-11-01', 2], ['a', '2026-11-03', 1], ['b', '2026-11-03', 4], ['a', '2026-10-31', 7]];
+  const s = C.dailySeries(counts, { from: '2026-11-01', to: '2026-11-30', today: '2026-11-04', vrmId: 'a' });
+  assert.deepEqual(s.map((x) => [x.date, x.count]), [['2026-11-01', 2], ['2026-11-02', 0], ['2026-11-03', 1], ['2026-11-04', 0]]);
+  assert.equal(s[0].label, '1 Nov');
+  const team = C.dailySeries(counts, { from: '2026-11-03', to: '2026-11-03', today: '2026-11-04' });
+  assert.equal(team[0].count, 5);
+  const all = C.dailySeries(counts, { from: '0000-01-01', to: '9999-12-31', today: '2026-11-04' });
+  assert.equal(all[0].date, '2026-10-31');
+  assert.equal(all.length, 5);
+  const st = C.dailyStats(s);
+  assert.deepEqual([st.total, st.days, st.activeDays, st.best.date], [3, 4, 2, '2026-11-01']);
+  assert.equal(C.dailyStats([]).best, null);
+});

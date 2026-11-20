@@ -134,6 +134,8 @@ export function createBackend(options = {}) {
   let nowMs = options.now ?? Date.now();
   let serial = 0;
   const errors = [];
+  const triggers = [];    // installed time-driven triggers ({handler, spec})
+  const driveCopies = []; // spreadsheet copies made by backups
   const lock = {
     held: false,
     busy: false,            // force tryLock to fail (contention test)
@@ -203,8 +205,26 @@ export function createBackend(options = {}) {
     },
     Logger: { log() {} },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'owner@example.test' }) },
-    ScriptApp: { getProjectTriggers: () => [], deleteTrigger() {}, newTrigger() { throw new Error('Triggers not emulated'); } },
-    DriveApp: { getFileById() { throw new Error('Drive not emulated'); } }
+    ScriptApp: {
+      getProjectTriggers: () => triggers.map((t) => ({ getHandlerFunction: () => t.handler, _t: t })),
+      deleteTrigger: (tr) => { const i = triggers.indexOf(tr._t); if (i >= 0) triggers.splice(i, 1); },
+      newTrigger: (handler) => {
+        const t = { handler, spec: {} };
+        const b = {
+          timeBased: () => b, everyDays: (n) => { t.spec.everyDays = n; return b; }, everyHours: (n) => { t.spec.everyHours = n; return b; },
+          atHour: (h) => { t.spec.atHour = h; return b; }, inTimezone: (z) => { t.spec.tz = z; return b; },
+          create: () => { triggers.push(t); return { getHandlerFunction: () => handler }; }
+        };
+        return b;
+      }
+    },
+    DriveApp: {
+      getFileById: (id) => {
+        if (id !== props.get('SPREADSHEET_ID')) throw new Error('Drive file not found');
+        return { makeCopy: (name) => { const c = { id: 'copy-' + (driveCopies.length + 1), name, snapshot: JSON.stringify(book.toJSON()) }; driveCopies.push(c); return { getId: () => c.id, getName: () => c.name }; } };
+      },
+      getFolderById: () => ({ getFiles: () => ({ hasNext: () => false }) })
+    }
   };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(CODE_PATH, 'utf8'), ctx, { filename: 'Code.gs' });
@@ -235,7 +255,7 @@ export function createBackend(options = {}) {
     return r;
   }
   return {
-    ctx, call, raw, run, lock, props, errors,
+    ctx, call, raw, run, lock, props, errors, triggers, driveCopies,
     get book() { return book; },
     cache: cacheStore,
     now: () => nowMs,

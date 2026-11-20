@@ -242,11 +242,51 @@ test('TC-012 existing code under another VRM: zero added, owner unchanged, discl
   const r = ok(be.call('addEntries', { token: t.khushi, vrmId: vrm['Khushi Dodiya'], date: '2026-11-17', codes: ['cl002'] }));
   assert.equal(r.summary.added, 0);
   assert.equal(r.results[0].status, 'DUPLICATE_EXISTING');
-  assert.equal(r.results[0].owner.vrmName, 'Parth Sharma');
+  assert.equal(r.results[0].owner, undefined, 'by default a VRM never learns which other VRM owns a code');
   assert.equal(activeEntries(be)[0].vrm_id, vrm['Parth Sharma']);
+  be.props.set('MEMBER_SCOPE', 'team');
+  const r1 = ok(be.call('addEntries', { token: t.khushi, vrmId: vrm['Khushi Dodiya'], date: '2026-11-17', codes: ['CL002'] }));
+  assert.equal(r1.results[0].owner.vrmName, 'Parth Sharma', 'team scope discloses the owner');
   be.props.set('MEMBER_SEE_DUP_OWNER', 'false');
   const r2 = ok(be.call('addEntries', { token: t.khushi, vrmId: vrm['Khushi Dodiya'], date: '2026-11-17', codes: ['CL002'] }));
   assert.equal(r2.results[0].owner, undefined, 'owner hidden when disclosure disabled');
+});
+
+test('default member scope is own: snapshot, ledger, lookup and export show only the signed-in VRM', () => {
+  const { be, t, vrm } = fresh();
+  ok(be.call('addEntries', { token: t.admin, vrmId: vrm['Khushi Dodiya'], date: '2026-11-17', codes: ['DEF1'] }));
+  ok(be.call('addEntries', { token: t.admin, vrmId: vrm['Parth Sharma'], date: '2026-11-17', codes: ['DEF2', 'DEF3'] }));
+  const d = ok(be.call('getData', { token: t.parth }));
+  assert.equal(d.config.memberScope, 'own');
+  assert.deepEqual(d.vrms.map((v) => v.name), ['Parth Sharma']);
+  assert.deepEqual(d.counts.map((c) => c[0]), [vrm['Parth Sharma']]);
+  assert.equal(ok(be.call('queryEntries', { token: t.parth })).total, 2);
+  assert.equal(ok(be.call('exportReport', { token: t.parth, filter: { allTime: true } })).total, 2);
+  assert.equal(ok(be.call('lookupCodes', { token: t.parth, codes: ['DEF1'] })).results[0].owner, undefined);
+  assert.equal(ok(be.call('getData', { token: t.admin })).counts.length, 2, 'admins still see the team');
+  assert.equal(ok(be.call('getData', { token: t.reviewer })).vrms.length, 9, 'reviewers still see the team');
+});
+
+test('backup schedule: admin installs triggers once, runs a backup, status records it; others refused', () => {
+  const { be, t } = fresh();
+  let st = ok(be.call('scheduleStatus', { token: t.admin }));
+  assert.deepEqual([st.backupInstalled, st.maintenanceInstalled, st.lastBackupAt], [false, false, '']);
+  err(be.call('installSchedule', { token: t.parth }), 'FORBIDDEN');
+  err(be.call('runBackup', { token: t.reviewer }), 'FORBIDDEN');
+  st = ok(be.call('installSchedule', { token: t.admin }));
+  assert.deepEqual([st.backupInstalled, st.maintenanceInstalled], [true, true]);
+  ok(be.call('installSchedule', { token: t.admin }));
+  assert.equal(be.triggers.filter((x) => x.handler === 'backupNow').length, 1, 're-installing never duplicates triggers');
+  const daily = be.triggers.find((x) => x.handler === 'backupNow').spec;
+  assert.deepEqual([daily.everyDays, daily.atHour, daily.tz], [1, 1, 'Asia/Kolkata']);
+  st = ok(be.call('runBackup', { token: t.admin }));
+  assert.ok(st.lastBackupAt && st.lastBackupName.startsWith('VRM MIS backup '));
+  assert.equal(be.driveCopies.length, 1);
+  assert.ok(JSON.parse(be.driveCopies[0].snapshot).Users, 'backup is a full copy of the database');
+  be.run('backupNow'); // what the daily trigger runs
+  assert.equal(be.driveCopies.length, 2);
+  assert.notEqual(ok(be.call('scheduleStatus', { token: t.admin })).lastBackupName, '');
+  assert.ok(audits(be).some((a) => a.action === 'installSchedule') && audits(be).some((a) => a.action === 'runBackup'));
 });
 
 test('TC-013 duplicate committed by a concurrent execution while waiting for the lock is caught', () => {

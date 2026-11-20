@@ -143,7 +143,7 @@ a{color:var(--brand-ink)}
 .meta{font-size:12px;color:var(--muted);font-weight:500}
 
 /* ---------- KPI ---------- */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
 .kpi{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow-sm);min-width:0}
 .kpi .top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
 .kpi .lbl{font-size:12px;font-weight:650;color:var(--muted)}
@@ -440,4 +440,38 @@ details.table-alt summary{cursor:pointer;padding:12px 22px;font-size:12.5px;font
   .sidebar,.topbar,.toasts,.actions,.pager,.backdrop{display:none!important}
   .shell{margin:0}
   .table-scroll{max-height:none;overflow:visible}
+}
+
+/* ---------- v3.1: dashboard period filter, quick add, daily chart ---------- */
+.dash-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.dash-top .actions.meta{margin:0}
+.filter-pop{position:relative}
+.filter-pop > summary{list-style:none;cursor:pointer}
+.filter-pop > summary::-webkit-details-marker{display:none}
+.filter-pop > summary b{color:var(--ink)}
+.filter-pop[open] > summary{border-color:var(--brand);box-shadow:var(--ring)}
+.filter-pop .pop{position:absolute;right:0;top:calc(100% + 8px);z-index:45;width:min(360px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:16px;display:grid;gap:12px}
+.preset-list{border:0;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:2px 12px}
+.preset-list legend{grid-column:1/-1;margin-bottom:6px}
+.preset-list .check{min-height:34px}
+.quick{margin-bottom:16px;border-color:color-mix(in srgb,var(--brand) 35%,var(--line))}
+.quick-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.quick-head h3{margin:0;font-family:var(--font-display);font-size:14.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;font-stretch:125%}
+.quick-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.quick-row .field.grow{flex:1 1 280px;min-width:0}
+.quick-row .field{flex:0 0 auto}
+.quick-row input[type="date"]{width:auto}
+.badge.qa-vrm{min-height:42px;padding:0 12px;border-radius:var(--radius-xs);font-size:12.5px;color:var(--ink-2)}
+.badge.qa-vrm svg{width:14px;height:14px}
+#qa-result:not(:empty){margin-top:10px}
+#qa-result .banner{margin:0}
+.quick-result{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap;font-size:13px}
+.kpi.k6 .ic{background:var(--bg-2);color:var(--ink-2)}
+.daily-stats{padding-bottom:4px}
+.own-status{margin:16px 0 0}
+@media (max-width:640px){
+  .quick-row .field,.quick-row .btn,.badge.qa-vrm{flex:1 1 100%}
+  .quick-row input[type="date"]{width:100%}
+  .filter-pop .pop{position:fixed;left:16px;right:16px;top:auto;width:auto;max-height:80vh;overflow:auto}
+  .preset-list{grid-template-columns:1fr}
 }
