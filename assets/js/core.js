@@ -142,6 +142,83 @@
     return { ok: true, kind: 'year', from: y + '-01-01', to: y + '-12-31', label: 'Whole year ' + y };
   }
 
+  /* ----------------------------- period presets (Indian financial year) ----------------------------- */
+
+  /** Start year of the financial year (April-March) containing an ISO date. */
+  function fyStartYear(iso) { var y = +iso.slice(0, 4), m = +iso.slice(5, 7); return m >= 4 ? y : y - 1; }
+  function fyLabel(sy) { return 'FY ' + sy + '-' + pad2((sy + 1) % 100); }
+  var PRESETS = [
+    ['thisMonth', 'This month'], ['lastMonth', 'Last month'],
+    ['q1', 'Q1 (Apr–Jun)'], ['q2', 'Q2 (Jul–Sep)'], ['q3', 'Q3 (Oct–Dec)'], ['q4', 'Q4 (Jan–Mar)'],
+    ['fy', 'Financial year'], ['all', 'All time'], ['custom', 'Custom dates']
+  ];
+  /**
+   * Resolve a dashboard period choice. p = {preset, fy (FY start year, for quarters/fy), from, to}.
+   * Returns the same shape as resolvePeriod ({ok, kind, from, to, label} | {ok:false, error}).
+   */
+  function presetPeriod(p, today) {
+    p = p || {};
+    var preset = p.preset || 'thisMonth', sy = Number(p.fy) || fyStartYear(today), ym, y, m;
+    var monthRange = function (ymv) {
+      var yy = ymv.slice(0, 4), mm = ymv.slice(5, 7);
+      return { ok: true, kind: 'month', from: ymv + '-01', to: ymv + '-' + pad2(lastDayOfMonth(yy, mm)), label: MONTHS[+mm - 1] + ' ' + yy };
+    };
+    switch (preset) {
+      case 'thisMonth': return monthRange(today.slice(0, 7));
+      case 'lastMonth': return monthRange(addMonths(today.slice(0, 7), -1));
+      case 'q1': case 'q2': case 'q3': case 'q4':
+        var qi = +preset.slice(1) - 1;
+        ym = addMonths(sy + '-04', qi * 3);
+        var end = addMonths(ym, 2);
+        y = end.slice(0, 4); m = end.slice(5, 7);
+        return { ok: true, kind: 'quarter', from: ym + '-01', to: end + '-' + pad2(lastDayOfMonth(y, m)),
+          label: 'Q' + (qi + 1) + ' ' + fyLabel(sy) + ' (' + MONTHS_SHORT[+ym.slice(5, 7) - 1] + '–' + MONTHS_SHORT[+m - 1] + ' ' + y + ')' };
+      case 'fy': return { ok: true, kind: 'fy', from: sy + '-04-01', to: (sy + 1) + '-03-31', label: fyLabel(sy) + ' (Apr ' + sy + ' – Mar ' + (sy + 1) + ')' };
+      case 'all': return resolvePeriod({ allTime: true }, today);
+      case 'custom':
+        if (!p.from && !p.to) return { ok: false, error: 'Choose a From date, a To date, or both.' };
+        return resolvePeriod({ from: p.from || '', to: p.to || '' }, today);
+      default: return { ok: false, error: 'Unknown period.' };
+    }
+  }
+  /** Financial years from the first year with data up to the current one, newest first. */
+  function fyOptions(counts, today) {
+    var first = fyStartYear(today);
+    (counts || []).forEach(function (c) { var s = fyStartYear(c[1]); if (s < first) first = s; });
+    var out = [];
+    for (var s = fyStartYear(today); s >= first; s--) out.push({ value: String(s), label: fyLabel(s) });
+    return out;
+  }
+
+  /**
+   * Day-by-day activations for a period (bounded to data/today so open ranges stay finite).
+   * Returns [{date, label, count}] with every calendar day present (zero days included).
+   */
+  function dailySeries(counts, opts) {
+    var today = opts.today, vrmId = opts.vrmId || '', per = {}, first = '';
+    (counts || []).forEach(function (c) {
+      if (vrmId && c[0] !== vrmId) return;
+      per[c[1]] = (per[c[1]] || 0) + (Number(c[2]) || 0);
+      if (!first || c[1] < first) first = c[1];
+    });
+    var from = opts.from && opts.from !== '0000-01-01' ? opts.from : (first || today);
+    var to = opts.to && opts.to !== '9999-12-31' ? opts.to : today;
+    if (to > today) to = today;
+    if (from > to) return [];
+    var out = [], t = Date.parse(from + 'T00:00:00Z'), end = Date.parse(to + 'T00:00:00Z');
+    for (; t <= end && out.length < 3700; t += 86400000) {
+      var d = new Date(t).toISOString().slice(0, 10);
+      out.push({ date: d, label: +d.slice(8, 10) + ' ' + MONTHS_SHORT[+d.slice(5, 7) - 1], count: per[d] || 0 });
+    }
+    return out;
+  }
+  /** Summary figures for a daily series. */
+  function dailyStats(series) {
+    var total = 0, active = 0, best = null;
+    series.forEach(function (s) { total += s.count; if (s.count) active++; if (!best || s.count > best.count) best = s; });
+    return { total: total, days: series.length, activeDays: active, average: series.length ? total / series.length : 0, best: best && best.count ? best : null };
+  }
+
   /* ----------------------------- metrics ----------------------------- */
 
   /**
@@ -434,6 +511,8 @@
     istParts: istParts, todayIST: todayIST, isValidISODate: isValidISODate, isoFromYMD: isoFromYMD, checkActivationDate: checkActivationDate,
     lastDayOfMonth: lastDayOfMonth, addMonths: addMonths, fmtDate: fmtDate, fmtDateTimeIST: fmtDateTimeIST, resolvePeriod: resolvePeriod,
     computeMetrics: computeMetrics, monthlySeries: monthlySeries, yearsWithData: yearsWithData,
+    PRESETS: PRESETS, fyStartYear: fyStartYear, fyLabel: fyLabel, presetPeriod: presetPeriod, fyOptions: fyOptions,
+    dailySeries: dailySeries, dailyStats: dailyStats,
     csvCell: csvCell, toCsv: toCsv,
     normHeader: normHeader, autoMapHeaders: autoMapHeaders, excelSerialToISO: excelSerialToISO, parseTextDate: parseTextDate,
     resolvePairDates: resolvePairDates, sheetToGrid: sheetToGrid, cellText: cellText, codeFromCell: codeFromCell, dateFromCell: dateFromCell,

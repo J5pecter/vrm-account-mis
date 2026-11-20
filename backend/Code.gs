@@ -131,7 +131,10 @@ var ROUTES = {
   integrityReport:    { roles: ADMINS, fn: function () { return integrityReport_(); } },
   getLogs:            { roles: AUDITORS, fn: function (p) { return getLogs_(p); } },
   listImportBatches:  { roles: AUDITORS, fn: function (p) { return listImportBatches_(p); } },
-  getAdminOverview:   { roles: AUDITORS, fn: function (p, u) { return adminOverview_(u); } }
+  getAdminOverview:   { roles: AUDITORS, fn: function (p, u) { return adminOverview_(u); } },
+  scheduleStatus:     { roles: ADMINS, fn: function () { return scheduleStatus_(); } },
+  installSchedule:    { roles: ADMINS, write: true, noIdem: true, fn: function (p, u) { return installSchedule_(u); } },
+  runBackup:          { roles: ADMINS, write: true, noIdem: true, fn: function (p, u) { return runBackup_(u); } }
 };
 /** v1/v2 action names. They are rejected with an explicit upgrade code instead of a vague error. */
 var LEGACY_ACTIONS = { getVrms: 1, deleteVRM: 1, deleteEntry: 1, importRows: 1 };
@@ -481,7 +484,8 @@ function findEntry_(id) {
 /* Authorisation helpers                                                 */
 /* ===================================================================== */
 
-function memberScope_() { return prop_('MEMBER_SCOPE') === 'own' ? 'own' : 'team'; }
+/** Members see only their own VRM; set Script Property MEMBER_SCOPE=team to let them read team figures. */
+function memberScope_() { return prop_('MEMBER_SCOPE') === 'team' ? 'team' : 'own'; }
 function canReadVrm_(user, vrmId) {
   if (user.role === 'admin' || user.role === 'reviewer') return true;
   return memberScope_() === 'team' || vrmId === user.assigned_vrm_id;
@@ -1736,9 +1740,12 @@ function rewrite_(name, keep) {
   append_(name, kept);
 }
 
-/** Copy the whole spreadsheet to Drive. Retention pruning only when BACKUP_RETENTION_DAYS is set. */
+/** Copy the whole spreadsheet to Drive (daily trigger entry point). Retention pruning only when BACKUP_RETENTION_DAYS is set. */
 function backupNow() {
   REQ_ = newReq_();
+  return backup_().id;
+}
+function backup_() {
   var id = prop_('SPREADSHEET_ID');
   if (!id) throw new Error('SPREADSHEET_ID missing');
   var stamp = Utilities.formatDate(new Date(), APP.TZ, 'yyyy-MM-dd_HHmm');
@@ -1755,7 +1762,51 @@ function backupNow() {
     }
   }
   Logger.log('Backup created: ' + copy.getName());
-  return copy.getId();
+  var at = nowIso_();
+  var record = function () { setMeta_('last_backup_at', at); setMeta_('last_backup_name', copy.getName()); };
+  if (REQ_.inLock) record();
+  else {
+    var lock = LockService.getScriptLock();
+    if (lock.tryLock(30000)) {
+      try { REQ_.cache = {}; record(); SpreadsheetApp.flush(); } finally { lock.releaseLock(); }
+    }
+  }
+  return { id: copy.getId(), name: copy.getName(), at: at };
+}
+
+/** Upsert one Meta key (caller holds the script lock). */
+function setMeta_(key, value) {
+  var row = rows_('Meta').filter(function (m) { return m.key === key; })[0];
+  if (row) update_('Meta', row, { value: value, updated_at: nowIso_() });
+  else append_('Meta', [{ key: key, value: value, updated_at: nowIso_() }]);
+}
+function getMeta_(key) {
+  var row = rows_('Meta').filter(function (m) { return m.key === key; })[0];
+  return row ? row.value : '';
+}
+
+/** What is scheduled, and when the last backup ran. */
+function scheduleStatus_() {
+  var handlers = ScriptApp.getProjectTriggers().map(function (t) { return t.getHandlerFunction(); });
+  return {
+    backupInstalled: handlers.indexOf('backupNow') >= 0,
+    maintenanceInstalled: handlers.indexOf('maintenance') >= 0,
+    backupTime: '01:00 IST daily',
+    lastBackupAt: getMeta_('last_backup_at'),
+    lastBackupName: getMeta_('last_backup_name'),
+    backupFolderSet: !!prop_('BACKUP_FOLDER_ID'),
+    retentionDays: Number(prop_('BACKUP_RETENTION_DAYS') || 0)
+  };
+}
+function installSchedule_(user) {
+  installTriggers();
+  audit_(user, 'installSchedule', { entityType: 'schedule', detail: 'Daily backup at 01:00 IST and hourly maintenance installed' });
+  return scheduleStatus_();
+}
+function runBackup_(user) {
+  var b = backup_();
+  audit_(user, 'runBackup', { entityType: 'backup', entityId: b.id, detail: 'Manual backup ' + b.name });
+  return scheduleStatus_();
 }
 
 /** Daily 01:00 IST backup and hourly maintenance. Run once by the owner. */

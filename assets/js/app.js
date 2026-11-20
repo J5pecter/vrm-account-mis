@@ -51,6 +51,8 @@
     route: '', loaded: false,
     ui: {
       trend: { mode: 'last12', vrmId: '' },
+      dash: { preset: 'thisMonth', fy: '', from: '', to: '', vrmId: '', error: '' },
+      quick: { text: '', date: '', vrmId: '', busy: false, pending: null, result: null },
       mis: { year: '', month: '', from: '', to: '', vrmId: '', sortKey: 'period', sortDir: 'desc' },
       input: { vrmId: '', date: '', text: '', result: null, pending: null, busy: false },
       lookup: { text: '', results: null, busy: false },
@@ -64,8 +66,8 @@
   S.ui.imp = newImport();
 
   var ROUTES = {
-    dashboard: { title: 'Dashboard', sub: 'Client-code activations across the VRM desk', roles: ALL, icon: 'dash', group: 'Overview', render: renderDashboard },
-    mis: { title: 'MIS – VRM Wise Summary', sub: 'Period, VRM and team reporting with exports', roles: ALL, icon: 'table', group: 'Overview', render: renderMis, refresh: renderMisResults },
+    dashboard: { title: 'Dashboard', sub: 'Client-code activations across the VRM desk', memberSub: 'Your client-code activations', roles: ALL, icon: 'dash', group: 'Overview', render: renderDashboard, refresh: renderDashBody },
+    mis: { title: 'MIS – VRM Wise Summary', memberTitle: 'My MIS', sub: 'Period, VRM and team reporting with exports', memberSub: 'Your activations by period, with exports', roles: ALL, icon: 'table', group: 'Overview', render: renderMis, refresh: renderMisResults },
     input: { title: 'Analysis & Input', sub: 'Record client codes and the daily reporting status', roles: ['admin', 'member'], icon: 'edit', group: 'Work', render: renderInput, refresh: refreshInputPanels },
     lookup: { title: 'Client Code Lookup', sub: 'Check codes and search the activation ledger', roles: ALL, icon: 'search', group: 'Work', render: renderLookup, refresh: function () {} },
     'import': { title: 'Excel / CSV Import', sub: 'Preview, validate and import activation files', roles: ['admin', 'member'], icon: 'upload', group: 'Work', render: renderImport, refresh: function () {} },
@@ -337,10 +339,11 @@
       var r = ROUTES[k];
       if (!r.group || r.roles.indexOf(S.me.role) < 0) return;
       if (!groups[r.group]) { groups[r.group] = []; order.push(r.group); }
-      groups[r.group].push('<a class="navbtn" href="#/' + k + '" data-route="' + k + '"' + (S.route === k ? ' aria-current="page"' : '') + '>' + svg(r.icon) + '<span>' + h(r.title) + '</span></a>');
+      groups[r.group].push('<a class="navbtn" href="#/' + k + '" data-route="' + k + '"' + (S.route === k ? ' aria-current="page"' : '') + '>' + svg(r.icon) + '<span>' + h(routeTitle(k)) + '</span></a>');
     });
     $('#nav').innerHTML = order.map(function (g) { return '<div class="navgroup">' + h(g) + '</div>' + groups[g].join(''); }).join('');
   }
+  function routeTitle(k) { var r = ROUTES[k]; return isMember() && r.memberTitle ? r.memberTitle : r.title; }
   function currentRoute() {
     var r = (location.hash || '').replace(/^#\/?/, '').split('?')[0];
     return ROUTES[r] ? r : 'dashboard';
@@ -363,9 +366,9 @@
     if (!S.me || !S.loaded) return;
     var name = currentRoute(), def = ROUTES[name], main = $('#main');
     S.route = name;
-    $('#page-title').textContent = def.title;
-    $('#page-sub').textContent = def.sub;
-    document.title = def.title + ' · VRM Account MIS';
+    $('#page-title').textContent = routeTitle(name);
+    $('#page-sub').textContent = isMember() && def.memberSub ? def.memberSub : def.sub;
+    document.title = routeTitle(name) + ' · VRM Account MIS';
     $$('#nav a').forEach(function (a) { if (a.getAttribute('data-route') === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     if (isMobile()) setSide(false);
     if (def.roles.indexOf(S.me.role) < 0) {
@@ -389,8 +392,8 @@
     for (var i = 0; i < steps.length; i++) if (steps[i] * p >= x) return steps[i] * p;
     return 10 * p;
   }
-  function chartPlaceholder(id, series, caption) {
-    CHARTS[id] = { series: series, caption: caption };
+  function chartPlaceholder(id, series, caption, kind) {
+    CHARTS[id] = { series: series, caption: caption, kind: kind || 'monthly' };
     return '<div class="chart-wrap" data-chart="' + id + '"></div>';
   }
   function drawCharts() {
@@ -404,7 +407,8 @@
       var H = narrow ? 220 : 260, pl = 40, pr = 10, pt = 22, pb = 30, pw = W - pl - pr, ph = H - pt - pb;
       var max = Math.max.apply(null, series.map(function (s) { return s.count; }));
       var step = niceStep(max / 4), top = step * 4;
-      var band = pw / series.length, bw = Math.min(34, band * 0.6);
+      var daily = c.kind === 'daily', band = pw / series.length, bw = Math.max(1, Math.min(34, band * (daily && band < 6 ? 0.85 : 0.6)));
+      var labelEvery = Math.max(1, Math.ceil(series.length / Math.max(2, Math.floor(pw / (daily ? 58 : 44)))));
       var y = function (v) { return pt + ph - v / top * ph; };
       var x = function (i) { return pl + band * i + band / 2; };
       var out = '';
@@ -416,15 +420,24 @@
       series.forEach(function (s, i) {
         var yy = y(s.count);
         out += '<rect class="bar" rx="4" x="' + (x(i) - bw / 2).toFixed(1) + '" y="' + yy.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(0, pt + ph - yy).toFixed(1) + '"><title>' + h(s.label) + ': ' + C.fmtInt(s.count) + '</title></rect>';
-        if (s.count > 0 && (!narrow || band > 22)) out += '<text class="barval" x="' + x(i).toFixed(1) + '" y="' + (yy - 6).toFixed(1) + '">' + C.fmtInt(s.count) + '</text>';
-        var lbl = narrow ? s.label.slice(0, 3) : s.label;
-        if (!narrow || i % 2 === 0 || series.length <= 6) out += '<text class="axis" x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + h(lbl) + '</text>';
+        if (s.count > 0 && band > 22) out += '<text class="barval" x="' + x(i).toFixed(1) + '" y="' + (yy - 6).toFixed(1) + '">' + C.fmtInt(s.count) + '</text>';
+        var lbl = narrow && !daily ? s.label.slice(0, 3) : s.label;
+        if (i % labelEvery === 0) out += '<text class="axis" x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + h(lbl) + '</text>';
       });
-      out += '<polyline class="trendline" points="' + series.map(function (s, i) { return x(i).toFixed(1) + ',' + y(s.count).toFixed(1); }).join(' ') + '"/>';
-      series.forEach(function (s, i) { out += '<circle class="tdot" r="3" cx="' + x(i).toFixed(1) + '" cy="' + y(s.count).toFixed(1) + '"/>'; });
+      if (!daily) {
+        out += '<polyline class="trendline" points="' + series.map(function (s, i) { return x(i).toFixed(1) + ',' + y(s.count).toFixed(1); }).join(' ') + '"/>';
+        series.forEach(function (s, i) { out += '<circle class="tdot" r="3" cx="' + x(i).toFixed(1) + '" cy="' + y(s.count).toFixed(1) + '"/>'; });
+      } else if (series.length >= 14) {
+        // 7-day moving average smooths weekday/weekend swings.
+        out += '<polyline class="trendline" points="' + series.map(function (s, i) {
+          var lo = Math.max(0, i - 6), sum = 0;
+          for (var k = lo; k <= i; k++) sum += series[k].count;
+          return x(i).toFixed(1) + ',' + y(sum / (i - lo + 1)).toFixed(1);
+        }).join(' ') + '"/>';
+      }
       var best = series.reduce(function (b, s) { return s.count > b.count ? s : b; }, series[0]);
       el.innerHTML = '<svg class="chart-svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
-        h('Monthly activations, ' + c.caption + ': total ' + total + ', highest ' + best.label + ' with ' + best.count) + '">' + out + '</svg>';
+        h((daily ? 'Daily' : 'Monthly') + ' activations, ' + c.caption + ': total ' + total + ', highest ' + best.label + ' with ' + best.count) + '">' + out + '</svg>';
     });
   }
   var resizeTimer = null;
@@ -446,39 +459,42 @@
     if (r.status !== 'active') return '<span class="badge arch">Archived</span>';
     return r.reporting === 'filed' ? pill('filed', 'Filed') : r.reporting === 'zero' ? pill('zero', 'Confirmed zero') : pill('none', 'Not reported');
   }
-  function leaderboardHtml(m, limit) {
-    var rows = m.rows.slice().sort(function (a, b) { return b.month - a.month || b.all - a.all || a.name.localeCompare(b.name); });
-    if (limit) rows = rows.slice(0, limit);
+  function isMember() { return !!S.me && S.me.role === 'member'; }
+  /** Leaderboard for the selected period (admin view only). */
+  function leaderboardHtml(m, periodLabel) {
+    var rows = m.rows.slice().sort(function (a, b) { return b.period - a.period || b.all - a.all || a.name.localeCompare(b.name); });
     if (!rows.length) return empty('No VRMs on the roster yet.', 'users');
-    return '<div class="table-scroll short"><table><caption class="sr-only">Month leaderboard</caption><thead><tr><th scope="col">Rank</th><th scope="col">VRM</th><th scope="col" class="num">This month</th><th scope="col" class="hide-sm">Share of team</th></tr></thead><tbody>' +
+    return '<div class="table-scroll short"><table><caption class="sr-only">Leaderboard, ' + h(periodLabel) + '</caption><thead><tr><th scope="col">Rank</th><th scope="col">VRM</th><th scope="col" class="num">Activations</th><th scope="col" class="hide-sm">Share of team</th></tr></thead><tbody>' +
       rows.map(function (r, i) {
-        return '<tr><td>' + (r.month > 0 && i < 3 ? '<span class="rank r' + (i + 1) + '">' + (i + 1) + '</span>' : '<span class="rank">' + (i + 1) + '</span>') + '</td><td>' + avatar(r.name) + '</td><td class="num"><b>' + C.fmtInt(r.month) + '</b></td>' +
-          '<td class="hide-sm"><div class="sharebar"><div class="track"><div class="fill" data-w="' + (C.pct(r.month, m.teamTotals.month) * 100).toFixed(2) + '"></div></div><span class="pct">' + C.fmtPct(r.month, m.teamTotals.month) + '</span></div></td></tr>';
+        return '<tr><td>' + (r.period > 0 && i < 3 ? '<span class="rank r' + (i + 1) + '">' + (i + 1) + '</span>' : '<span class="rank">' + (i + 1) + '</span>') + '</td><td>' + avatar(r.name) + '</td><td class="num"><b>' + C.fmtInt(r.period) + '</b></td>' +
+          '<td class="hide-sm"><div class="sharebar"><div class="track"><div class="fill" data-w="' + (C.pct(r.period, m.teamTotals.period) * 100).toFixed(2) + '"></div></div><span class="pct">' + C.fmtPct(r.period, m.teamTotals.period) + '</span></div></td></tr>';
       }).join('') + '</tbody></table></div>';
   }
-  function shareHtml(m) {
-    var rows = m.rows.filter(function (r) { return r.month > 0; }).sort(function (a, b) { return b.month - a.month; });
-    if (!rows.length) return empty('No activations recorded this month yet.', 'users');
-    var total = m.teamTotals.month;
-    return '<div class="card-pad"><div class="stackbar" role="img" aria-label="Team share this month">' + rows.map(function (r, i) {
-      return '<span data-w="' + (r.month / total * 100).toFixed(3) + '" data-bg="' + PALETTE[i % PALETTE.length] + '" title="' + h(r.name + ': ' + r.month) + '"></span>';
+  function shareHtml(m, periodLabel) {
+    var rows = m.rows.filter(function (r) { return r.period > 0; }).sort(function (a, b) { return b.period - a.period; });
+    if (!rows.length) return empty('No activations in ' + periodLabel + '.', 'users');
+    var total = m.teamTotals.period;
+    return '<div class="card-pad"><div class="stackbar" role="img" aria-label="' + h('Team share, ' + periodLabel) + '">' + rows.map(function (r, i) {
+      return '<span data-w="' + (r.period / total * 100).toFixed(3) + '" data-bg="' + PALETTE[i % PALETTE.length] + '" title="' + h(r.name + ': ' + r.period) + '"></span>';
     }).join('') + '</div><div class="legend">' + rows.map(function (r, i) {
-      return '<div class="li"><span class="sw" data-bg="' + PALETTE[i % PALETTE.length] + '"></span><span class="ln">' + h(r.name) + '</span><span class="lv">' + C.fmtInt(r.month) + ' · ' + C.fmtPct(r.month, total) + '</span></div>';
+      return '<div class="li"><span class="sw" data-bg="' + PALETTE[i % PALETTE.length] + '"></span><span class="ln">' + h(r.name) + '</span><span class="lv">' + C.fmtInt(r.period) + ' · ' + C.fmtPct(r.period, total) + '</span></div>';
     }).join('') + '</div></div>';
   }
   function trendSeries() {
     var tr = S.ui.trend, t = today();
     var years = C.yearsWithData(S.counts, t);
     if (tr.mode !== 'last12' && years.indexOf(tr.mode) < 0) tr.mode = 'last12';
-    if (tr.vrmId && !vrmById(tr.vrmId)) tr.vrmId = '';
+    if (isMember()) tr.vrmId = S.me.assignedVrmId; // a VRM only ever sees their own trend
+    else if (tr.vrmId && !vrmById(tr.vrmId)) tr.vrmId = '';
     var series = C.monthlySeries(S.counts, tr.mode === 'last12' ? { mode: 'last12', today: t, vrmId: tr.vrmId } : { year: tr.mode, today: t, vrmId: tr.vrmId });
-    var caption = (tr.vrmId ? vrmName(tr.vrmId) : 'the whole team') + ', ' + (tr.mode === 'last12' ? 'last 12 months' : tr.mode);
+    var who = isMember() ? 'your activations' : tr.vrmId ? vrmName(tr.vrmId) : 'the whole team';
+    var caption = who + ', ' + (tr.mode === 'last12' ? 'last 12 months' : tr.mode);
     return { series: series, caption: caption, years: years };
   }
   function trendCard() {
     var tr = S.ui.trend, d = trendSeries();
-    return '<div class="card"><div class="card-head"><div><h3>Monthly trend</h3><div class="sub">Activations per month by activation date</div></div><div class="actions">' +
-      '<label class="sr-only" for="trend-scope">Trend scope</label><select id="trend-scope" data-change="trend">' + opt('', 'Whole team', !tr.vrmId) + vrmOptions(tr.vrmId) + '</select>' +
+    return '<div class="card"><div class="card-head"><div><h3>Monthly trend</h3><div class="sub">' + (isMember() ? 'Your activations per month' : 'Activations per month by activation date') + '</div></div><div class="actions">' +
+      (isMember() ? '' : '<label class="sr-only" for="trend-scope">Trend scope</label><select id="trend-scope" data-change="trend">' + opt('', 'Whole team', !tr.vrmId) + vrmOptions(tr.vrmId) + '</select>') +
       '<label class="sr-only" for="trend-range">Trend period</label><select id="trend-range" data-change="trend">' + opt('last12', 'Last 12 months', tr.mode === 'last12') +
       d.years.map(function (y) { return opt(y, 'Calendar year ' + y, tr.mode === y); }).join('') + '</select></div></div>' +
       '<div id="trend-body">' + trendBody(d) + '</div></div>';
@@ -490,39 +506,148 @@
       d.series.map(function (s) { return '<tr><td>' + h(C.MONTHS[+s.key.slice(5, 7) - 1] + ' ' + s.key.slice(0, 4)) + '</td><td class="num">' + C.fmtInt(s.count) + '</td></tr>'; }).join('') +
       '</tbody></table></div></details>';
   }
+
+  /* ----- period filter (This month, Last month, FY quarters, Financial year, All time, Custom) ----- */
+  function dashPeriod() { return C.presetPeriod(S.ui.dash, today()); }
+  function periodFilterHtml() {
+    var d = S.ui.dash, t = today(), p = dashPeriod();
+    if (!d.fy) d.fy = String(C.fyStartYear(t));
+    var custom = d.preset === 'custom', fyUsed = /^(q[1-4]|fy)$/.test(d.preset);
+    return '<details class="filter-pop" id="dash-filter"><summary class="btn ghost mini" aria-label="Choose the dashboard period">' + svg('cal') + '<span>Period: <b>' + h(p.ok ? p.label : 'choose a period') + '</b></span></summary>' +
+      '<div class="pop" role="group" aria-label="Dashboard period"><fieldset class="preset-list"><legend class="label">Show activations for</legend>' +
+      C.PRESETS.map(function (x) {
+        return '<label class="check"><input type="radio" name="dash-preset" value="' + x[0] + '" data-change="dash-preset"' + (d.preset === x[0] ? ' checked' : '') + '> ' + h(x[1]) + '</label>';
+      }).join('') + '</fieldset>' +
+      '<div class="field"><label for="dash-fy">Financial year <span class="opt">(for quarters and FY)</span></label><select id="dash-fy"' + (fyUsed ? '' : ' disabled') + '>' +
+      C.fyOptions(S.counts, t).map(function (o) { return opt(o.value, o.label, o.value === d.fy); }).join('') + '</select></div>' +
+      '<div class="fields"><div class="field"><label for="dash-from">From</label><input type="date" id="dash-from" min="2000-01-01" max="' + t + '" value="' + h(d.from) + '"' + (custom ? '' : ' disabled') + '></div>' +
+      '<div class="field"><label for="dash-to">To</label><input type="date" id="dash-to" min="2000-01-01" value="' + h(d.to) + '"' + (custom ? '' : ' disabled') + '></div></div>' +
+      '<div class="field-error" id="dash-filter-err" role="alert"' + (d.error ? '' : ' hidden') + '>' + h(d.error || '') + '</div>' +
+      '<div class="actions end"><button type="button" class="btn mini" data-action="dash-apply">Apply</button></div></div></details>';
+  }
+
+  /* ----- quick add (fast entry for the signed-in VRM; admins choose the VRM) ----- */
+  function quickWritable() { return activeVrms().filter(function (v) { return canWrite(v.id); }).sort(function (a, b) { return a.name.localeCompare(b.name); }); }
+  function quickAddHtml() {
+    var q = S.ui.quick, t = today(), list = quickWritable();
+    if (!list.length) return '';
+    var ownOk = S.me.assignedVrmId && list.some(function (v) { return v.id === S.me.assignedVrmId; });
+    if (q.vrmId && !list.some(function (v) { return v.id === q.vrmId; })) q.vrmId = '';
+    if (!q.vrmId) q.vrmId = ownOk ? S.me.assignedVrmId : list.length === 1 ? list[0].id : '';
+    if (!q.date || q.date > t) q.date = t;
+    return '<div class="card quick"><form id="quick-form" data-submit="quick-add" class="card-pad" novalidate>' +
+      '<div class="quick-head"><h3>Quick add</h3><span class="meta">Client codes whose accounts were opened · separate several with commas, semicolons or new lines</span></div>' +
+      '<div class="quick-row"><div class="field grow"><label class="sr-only" for="qa-codes">Client code(s)</label><input id="qa-codes" autocomplete="off" spellcheck="false" placeholder="Type or paste client codes, then press Enter" value="' + h(q.text) + '"></div>' +
+      (isMember() || list.length === 1 ? '<span class="badge qa-vrm" title="Recorded for">' + svg('user') + h(vrmName(q.vrmId)) + '</span>'
+        : '<div class="field"><label class="sr-only" for="qa-vrm">VRM</label><select id="qa-vrm">' + opt('', '— Choose VRM —', !q.vrmId) + list.map(function (v) { return opt(v.id, v.name, v.id === q.vrmId); }).join('') + '</select></div>') +
+      '<div class="field"><label class="sr-only" for="qa-date">Activation date</label><input type="date" id="qa-date" min="2000-01-01" max="' + t + '" value="' + h(q.date) + '" title="Activation date (IST)"></div>' +
+      '<button type="submit" class="btn" id="qa-save">' + svg('plus') + '<span class="lbl">Save</span></button></div>' +
+      '<div id="qa-result" aria-live="polite">' + quickResultHtml() + '</div></form></div>';
+  }
+  function quickResultHtml() {
+    var r = S.ui.quick.result;
+    if (!r) return '';
+    if (r.uncertain) return banner('warn', '<b>Not confirmed.</b> ' + h(r.message) + ' <button type="button" class="btn link mini" data-action="quick-retry">Retry safely</button> <button type="button" class="btn link mini" data-action="quick-discard">Discard</button>');
+    if (r.error) return banner('err', '<b>Nothing was saved.</b> ' + h(r.error));
+    var sm = r.summary, problems = r.results.filter(function (x) { return x.status !== 'ADDED'; });
+    return '<div class="quick-result"><span class="st ' + (sm.added ? 'ok' : 'warn') + '">Saved ' + sm.added + ' of ' + sm.received + '</span>' +
+      (problems.length ? '<span class="meta">Not added: ' + problems.slice(0, 6).map(function (x) {
+        return '<span class="code-pill">' + h(x.input || '(blank)') + '</span> ' + h(C.STATUS_TEXT[x.status] || x.status);
+      }).join(' · ') + (problems.length > 6 ? ' · +' + (problems.length - 6) + ' more' : '') + '</span>' : '') +
+      ' <span class="meta">' + h(vrmName(r.vrmId)) + ', ' + h(C.fmtDate(r.date)) + '</span></div>';
+  }
+  function submitQuick() {
+    var q = S.ui.quick, btn = $('#qa-save');
+    if (!q.pending || q.busy) return;
+    q.busy = true;
+    busy(btn, true);
+    var pend = q.pending;
+    Api.call('addEntries', pend.payload, { requestId: pend.requestId, timeout: 90000 }).then(function (res) {
+      q.result = { summary: res.summary, results: res.results, vrmId: pend.payload.vrmId, date: pend.payload.date };
+      q.pending = null; q.text = '';
+      var i = $('#qa-codes'); if (i) i.value = '';
+      announce('Saved ' + res.summary.added + ' of ' + res.summary.received + ' codes.');
+      refreshData({ quiet: true });
+    }, function (e) {
+      if (e.uncertain) q.result = { uncertain: true, message: e.message };
+      else { q.result = { error: errMsg(e) }; q.pending = null; }
+    }).then(function () {
+      q.busy = false;
+      busy($('#qa-save'), false);
+      var box = $('#qa-result'); if (box) box.innerHTML = quickResultHtml();
+      var i = $('#qa-codes'); if (i && !q.pending) i.focus();
+    });
+  }
+
+  /* ----- day-by-day chart ----- */
+  function dailyCard(p, vrmId, idSuffix) {
+    var t = today(), series = C.dailySeries(S.counts, { from: p.from, to: p.to, today: t, vrmId: vrmId }), st = C.dailyStats(series);
+    var who = isMember() ? 'your activations' : vrmId ? vrmName(vrmId) : 'the whole team';
+    var scopeSel = isMember() || idSuffix !== 'dash' ? '' : '<label class="sr-only" for="daily-scope">Daily chart scope</label><select id="daily-scope" data-change="dash-scope">' + opt('', 'Whole team', !vrmId) + vrmOptions(vrmId) + '</select>';
+    return '<div class="card"><div class="card-head"><div><h3>Day by day</h3><div class="sub">Accounts opened each day · ' + h(p.label) + '</div></div><div class="actions">' + scopeSel + '</div></div>' +
+      '<div class="card-pad daily-stats"><div class="chips">' +
+      '<div class="chip"><span class="n">' + C.fmtInt(st.total) + '</span><span class="l">Total</span></div>' +
+      '<div class="chip info"><span class="n">' + (st.average >= 10 ? Math.round(st.average) : st.average.toFixed(1)) + '</span><span class="l">Daily average</span></div>' +
+      '<div class="chip ok"><span class="n">' + (st.best ? C.fmtInt(st.best.count) : 0) + '</span><span class="l">Best day' + (st.best ? ' · ' + h(C.fmtDate(st.best.date)) : '') + '</span></div>' +
+      '<div class="chip"><span class="n">' + st.activeDays + '</span><span class="l">Days with activations (of ' + st.days + ')</span></div></div></div>' +
+      chartPlaceholder('daily-' + idSuffix, series, who + ', ' + p.label, 'daily') +
+      '<div class="chart-legend"><span><span class="sw brand"></span>Accounts opened per day</span>' + (series.length >= 14 ? '<span><span class="sw teal"></span>7-day average</span>' : '') + '</div>' +
+      '<details class="table-alt"><summary>Show the daily figures as a table</summary><div class="table-scroll short"><table><caption class="sr-only">Daily activations, ' + h(who) + '</caption><thead><tr><th scope="col">Date</th><th scope="col" class="num">Activations</th></tr></thead><tbody>' +
+      series.slice().reverse().map(function (x) { return '<tr><td>' + h(C.fmtDate(x.date)) + '</td><td class="num">' + C.fmtInt(x.count) + '</td></tr>'; }).join('') +
+      '</tbody></table></div></details></div>';
+  }
+
   function renderDashboard(el) {
-    var t = today();
-    var m = metricsFor(C.resolvePeriod({ year: t.slice(0, 4), month: t.slice(5, 7) }, t), '');
-    var tt = m.teamTotals;
-    var act = m.rows.filter(function (r) { return r.status === 'active'; });
-    var filed = act.filter(function (r) { return r.reporting === 'filed'; }).length;
-    var zero = act.filter(function (r) { return r.reporting === 'zero'; }).length;
-    var own = S.config.memberScope === 'own' && S.me.role === 'member';
-    var html = freshness();
-    if (own) html += banner('info', 'Your account shows <b>your own VRM</b> only. Team-wide figures are visible to administrators.');
+    el.innerHTML = '<div id="dash-quick">' + quickAddHtml() + '</div><div id="dash-body"></div>';
+    renderDashBody();
+  }
+  function renderDashBody() {
+    var box = $('#dash-body');
+    if (!box) return;
+    var t = today(), d = S.ui.dash, p = dashPeriod(), member = isMember();
+    if (!p.ok) { d.preset = 'thisMonth'; p = dashPeriod(); }
+    var own = member ? S.me.assignedVrmId : '';
+    var m = metricsFor(p, own), tt = member ? m.scopeTotals : m.teamTotals;
+    var html = '<div class="dash-top">' + freshness() + periodFilterHtml() + '</div>';
+    if (member && !own) html += banner('err', '<b>Your account is not linked to a VRM.</b> Ask an administrator to link it.');
     html += '<div class="kpis">' +
       kpi('k1', 'Today', tt.today, 'Activations dated ' + C.fmtDate(t), 'clock') +
-      kpi('k2', 'This month', tt.month, C.MONTHS[+t.slice(5, 7) - 1] + ' ' + t.slice(0, 4), 'cal') +
-      kpi('k3', 'This year', tt.year, 'Calendar year ' + t.slice(0, 4), 'trend') +
-      kpi('k4', 'All time', tt.all, 'Every active recorded code', 'check') +
-      kpi('k5', 'Active VRMs', m.activeVrmCount, 'On the roster, including zero performers', 'users') + '</div>';
-    html += '<p class="hint">“Activation” = one distinct client code accepted for a VRM and activation date. It is an operational proxy, not a back-office account-opening confirmation.</p>';
-    html += '<div class="sec"><h2>Today’s reporting</h2><span class="line"></span><span class="badge">' + h(C.fmtDate(t)) + ' IST</span></div>' +
-      '<div class="card card-pad"><div class="chips">' +
-      '<div class="chip ok"><span class="n">' + filed + '</span><span class="l">Filed (activations recorded)</span></div>' +
-      '<div class="chip info"><span class="n">' + zero + '</span><span class="l">Confirmed zero</span></div>' +
-      '<div class="chip warn"><span class="n">' + (act.length - filed - zero) + '</span><span class="l">Not reported yet</span></div>' +
-      '<div class="chip"><span class="n">' + act.length + '</span><span class="l">Active VRMs</span></div></div>' +
-      '<p class="hint">“Not reported” only means nothing has been recorded yet today; it is not evidence of non-compliance.' + (isRole('admin', 'reviewer') ? ' <a href="#/admin">Open the admin overview</a>.' : '') + '</p></div>';
+      kpi('k2', 'Selected period', tt.period, p.label, 'cal') +
+      kpi('k3', 'This month', tt.month, C.MONTHS[+t.slice(5, 7) - 1] + ' ' + t.slice(0, 4), 'trend') +
+      kpi('k4', 'This year', tt.year, 'Calendar year ' + t.slice(0, 4), 'check') +
+      kpi('k6', 'All time', tt.all, member ? 'All your recorded codes' : 'Every active recorded code', 'file') +
+      (member ? '' : kpi('k5', 'Active VRMs', m.activeVrmCount, 'On the roster, including zero performers', 'users')) + '</div>';
+    if (member) {
+      var me = m.rows[0] || { reporting: 'none', today: 0 };
+      html += '<div class="card card-pad status-panel own-status"><div>' + (me.reporting === 'filed' ? pill('filed', 'Filed') : me.reporting === 'zero' ? pill('zero', 'Confirmed zero') : pill('none', 'Not reported')) + '</div>' +
+        '<div class="grow">' + (me.reporting === 'filed' ? C.fmtInt(me.today) + ' activation' + (me.today === 1 ? '' : 's') + ' recorded today.' : me.reporting === 'zero' ? 'You confirmed zero activations today.' : 'Nothing recorded for today yet. Add codes above, or report zero if you had none.') + '</div>' +
+        (me.reporting === 'none' ? '<a class="btn ghost mini" href="#/input">Report zero</a>' : '') + '</div>';
+    } else {
+      var act = m.rows.filter(function (r) { return r.status === 'active'; });
+      var filed = act.filter(function (r) { return r.reporting === 'filed'; }).length, zero = act.filter(function (r) { return r.reporting === 'zero'; }).length;
+      html += '<div class="sec"><h2>Today’s reporting</h2><span class="line"></span><span class="badge">' + h(C.fmtDate(t)) + ' IST</span></div>' +
+        '<div class="card card-pad"><div class="chips">' +
+        '<div class="chip ok"><span class="n">' + filed + '</span><span class="l">Filed (activations recorded)</span></div>' +
+        '<div class="chip info"><span class="n">' + zero + '</span><span class="l">Confirmed zero</span></div>' +
+        '<div class="chip warn"><span class="n">' + (act.length - filed - zero) + '</span><span class="l">Not reported yet</span></div>' +
+        '<div class="chip"><span class="n">' + act.length + '</span><span class="l">Active VRMs</span></div></div>' +
+        '<p class="hint">“Not reported” only means nothing has been recorded yet today; it is not evidence of non-compliance. <a href="#/admin">Open the admin overview</a>.</p></div>';
+    }
+    html += '<div class="sec"><span class="line"></span></div>' + dailyCard(p, member ? own : d.vrmId, 'dash');
     html += '<div class="sec"><h2>Trend</h2><span class="line"></span></div>' + trendCard();
-    html += '<div class="grid2" ><div><div class="sec"><h2>Month leaderboard</h2><span class="line"></span></div><div class="card">' + leaderboardHtml(m) + '</div></div>' +
-      '<div><div class="sec"><h2>Team share this month</h2><span class="line"></span></div><div class="card">' + shareHtml(m) + '</div></div></div>';
-    html += '<div class="sec"><h2>VRM summary</h2><span class="line"></span><span class="badge">Today · Month · Year</span></div>';
-    html += m.rows.length ? '<div class="vgrid">' + m.rows.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (r) {
-      return '<div class="vcard"><div class="vh"><span class="ini" data-bg="' + colorFor(r.name) + '" aria-hidden="true">' + h(C.initials(r.name)) + '</span><span class="vn" title="' + h(r.name) + '">' + h(r.name) + '</span>' + reportingStatusPill(r) + '</div>' +
-        '<div class="vstats"><div class="s"><div class="n">' + C.fmtInt(r.today) + '</div><div class="l">Today</div></div><div class="s"><div class="n">' + C.fmtInt(r.month) + '</div><div class="l">Month</div></div><div class="s"><div class="n">' + C.fmtInt(r.year) + '</div><div class="l">Year</div></div></div></div>';
-    }).join('') + '</div>' : '<div class="card">' + empty('No VRMs on the roster yet.', 'users') + '</div>';
-    el.innerHTML = html;
+    if (!member) {
+      html += '<div class="grid2"><div><div class="sec"><h2>Leaderboard</h2><span class="line"></span><span class="badge">' + h(p.label) + '</span></div><div class="card">' + leaderboardHtml(m, p.label) + '</div></div>' +
+        '<div><div class="sec"><h2>Team share</h2><span class="line"></span><span class="badge">' + h(p.label) + '</span></div><div class="card">' + shareHtml(m, p.label) + '</div></div></div>';
+      html += '<div class="sec"><h2>VRM summary</h2><span class="line"></span><span class="badge">Today · Month · Year</span></div>';
+      html += m.rows.length ? '<div class="vgrid">' + m.rows.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (r) {
+        return '<div class="vcard"><div class="vh"><span class="ini" data-bg="' + colorFor(r.name) + '" aria-hidden="true">' + h(C.initials(r.name)) + '</span><span class="vn" title="' + h(r.name) + '">' + h(r.name) + '</span>' + reportingStatusPill(r) + '</div>' +
+          '<div class="vstats"><div class="s"><div class="n">' + C.fmtInt(r.today) + '</div><div class="l">Today</div></div><div class="s"><div class="n">' + C.fmtInt(r.month) + '</div><div class="l">Month</div></div><div class="s"><div class="n">' + C.fmtInt(r.year) + '</div><div class="l">Year</div></div></div></div>';
+      }).join('') + '</div>' : '<div class="card">' + empty('No VRMs on the roster yet.', 'users') + '</div>';
+    }
+    html += '<p class="hint">“Activation” = one distinct client code accepted for a VRM and activation date. It is an operational proxy, not a back-office account-opening confirmation.</p>';
+    box.innerHTML = html;
+    applyStyles(box);
+    drawCharts();
   }
 
   /* ================================ MIS ================================ */
@@ -538,9 +663,12 @@
     var rangeOn = !!(f.from || f.to);
     el.innerHTML = freshness() +
       '<div class="card card-pad"><form id="mis-form" data-submit="noop" novalidate><div class="fields">' +
+      '<div class="field"><label for="mis-preset">Quick period</label><select id="mis-preset" data-change="mis-preset">' + opt('', '— Choose —', true) +
+      [['thisMonth', 'This month'], ['lastMonth', 'Last month'], ['q1', 'Q1 (Apr–Jun) this FY'], ['q2', 'Q2 (Jul–Sep) this FY'], ['q3', 'Q3 (Oct–Dec) this FY'], ['q4', 'Q4 (Jan–Mar) this FY'],
+        ['fy', 'This financial year'], ['lastfy', 'Last financial year'], ['all', 'All time']].map(function (o) { return opt(o[0], o[1], false); }).join('') + '</select></div>' +
       '<div class="field"><label for="mis-year">Year</label><select id="mis-year" name="year" data-change="mis"' + (rangeOn ? ' disabled aria-describedby="range-note"' : '') + '>' + years.map(function (y) { return opt(y, y, y === f.year); }).join('') + '</select></div>' +
       '<div class="field"><label for="mis-month">Month</label><select id="mis-month" name="month" data-change="mis"' + (rangeOn ? ' disabled aria-describedby="range-note"' : '') + '>' + opt('', 'Whole year', !f.month) + C.MONTHS.map(function (mn, i) { var v = ('0' + (i + 1)).slice(-2); return opt(v, mn, v === f.month); }).join('') + '</select></div>' +
-      '<div class="field"><label for="mis-vrm">VRM</label><select id="mis-vrm" name="vrmId" data-change="mis">' + opt('', 'Whole team', !f.vrmId) + vrmOptions(f.vrmId) + '</select></div>' +
+      (isMember() ? '' : '<div class="field"><label for="mis-vrm">VRM</label><select id="mis-vrm" name="vrmId" data-change="mis">' + opt('', 'Whole team', !f.vrmId) + vrmOptions(f.vrmId) + '</select></div>') +
       '<div class="field"><label for="mis-from">From date <span class="opt">(optional)</span></label><input type="date" id="mis-from" name="from" min="2000-01-01" value="' + h(f.from) + '" data-change="mis"></div>' +
       '<div class="field"><label for="mis-to">To date <span class="opt">(optional)</span></label><input type="date" id="mis-to" name="to" min="2000-01-01" value="' + h(f.to) + '" data-change="mis"></div>' +
       '<div class="field actions"><button type="button" class="btn ghost" data-action="mis-clear-range"' + (rangeOn ? '' : ' disabled') + '>Clear range</button><button type="button" class="btn ghost" data-action="mis-reset">Reset</button></div>' +
@@ -571,6 +699,7 @@
         '<div class="actions"><button class="btn ghost" type="button" disabled>Export Excel</button><button class="btn ghost" type="button" disabled>Export CSV</button></div>';
       return;
     }
+    if (isMember()) { renderMisMember(box, p); return; }
     var m = metricsFor(p, f.vrmId), scope = f.vrmId ? vrmName(f.vrmId) : 'Whole team';
     var contributing = m.rows.filter(function (r) { return r.period > 0; });
     var top = m.rows.slice().sort(function (a, b) { return b.period - a.period; })[0];
@@ -602,6 +731,21 @@
     }
     box.innerHTML = html;
     applyStyles(box);
+  }
+  /** A VRM's own MIS: no team table, no per-VRM breakdown. */
+  function renderMisMember(box, p) {
+    var own = S.me.assignedVrmId, m = metricsFor(p, own), tt = m.scopeTotals, name = vrmName(own) || 'Your VRM';
+    var html = '<div class="sec"><h2>' + h(name) + ' · ' + h(p.label) + '</h2><span class="line"></span>' +
+      '<div class="actions"><button type="button" class="btn ghost mini" data-action="mis-export" data-fmt="xlsx">' + svg('download') + 'Export Excel</button>' +
+      '<button type="button" class="btn ghost mini" data-action="mis-export" data-fmt="csv">' + svg('download') + 'Export CSV</button>' +
+      '<button type="button" class="btn ghost mini" data-action="mis-export" data-fmt="xlsx" data-all="1" title="All your activations, all dates">' + svg('download') + 'All my data</button></div></div>';
+    html += '<div class="kpis">' + kpi('k2', 'Selected period', tt.period, p.label, 'cal') + kpi('k1', 'Today', tt.today, C.fmtDate(today()), 'clock') +
+      kpi('k3', 'This month', tt.month, C.MONTHS[+today().slice(5, 7) - 1] + ' ' + today().slice(0, 4), 'trend') + kpi('k4', 'This year', tt.year, 'Calendar year ' + today().slice(0, 4), 'check') +
+      kpi('k6', 'All time', tt.all, 'All your recorded codes', 'file') + '</div>';
+    html += '<div class="sec"><span class="line"></span></div>' + dailyCard(p, own, 'mis');
+    box.innerHTML = html;
+    applyStyles(box);
+    drawCharts();
   }
   function exportReport(btn, filter, meta, fmt) {
     busy(btn, true);
@@ -679,14 +823,24 @@
       '<button type="button" class="btn ghost" data-action="input-clear">Clear</button>' +
       '<a class="btn link" href="#/lookup">Check codes first</a></div></form>' +
       '<div id="in-result" aria-live="polite"></div></div></div>' +
-      '<div class="stack"><div class="card"><div class="card-head"><div><h3>Daily status</h3><div class="sub">Filed, confirmed zero or not reported</div></div></div><div class="card-pad" id="in-status"></div></div>' +
+      '<div class="stack"><div id="in-daily"></div><div class="card"><div class="card-head"><div><h3>Daily status</h3><div class="sub">Filed, confirmed zero or not reported</div></div></div><div class="card-pad" id="in-status"></div></div>' +
       '<div class="card card-pad"><h3 class="label">Bulk files</h3><p class="hint">Importing a spreadsheet? Use the import screen for a full preview, column mapping and an exception report.</p><a class="btn ghost" href="#/import">' + svg('upload') + 'Excel / CSV import</a></div></div></div>';
     el.innerHTML = html;
     updatePasteStats();
     renderInputResult();
     renderInputStatus();
+    renderInputDaily();
   }
-  function refreshInputPanels() { renderInputStatus(); var d = $('#in-date'); if (d) d.max = today(); }
+  function renderInputDaily() {
+    var box = $('#in-daily'), u = S.ui.input, t = today();
+    if (!box) return;
+    if (!u.vrmId) { box.innerHTML = ''; return; }
+    var from = new Date(Date.parse(t + 'T00:00:00Z') - 29 * 86400000).toISOString().slice(0, 10);
+    box.innerHTML = dailyCard({ from: from, to: t, label: 'Last 30 days · ' + vrmName(u.vrmId) }, u.vrmId, 'input');
+    applyStyles(box);
+    drawCharts();
+  }
+  function refreshInputPanels() { renderInputStatus(); renderInputDaily(); var d = $('#in-date'); if (d) d.max = today(); }
   function updatePasteStats() {
     var ta = $('#in-codes'), box = $('#paste-stats');
     if (!ta || !box) return;
@@ -1203,6 +1357,7 @@
   function loadAdmin() {
     var A = S.ui.admin;
     Api.call('getAdminOverview').then(function (d) { A.data = d; A.error = ''; }, function (e) { A.error = errMsg(e); }).then(renderAdminBody);
+    if (isRole('admin')) Api.call('scheduleStatus').then(function (d) { A.schedule = d; renderAdminBody(); }, function () { /* shown as unknown */ });
   }
   function renderAdminBody() {
     var box = $('#admin-body'), A = S.ui.admin, d = A.data, t = today();
@@ -1219,7 +1374,7 @@
       '<div class="card"><div class="table-scroll short"><table><caption>“Not reported” means nothing has been recorded yet; it is not evidence of non-compliance.</caption><thead><tr><th scope="col">VRM</th><th scope="col" class="num">Today</th><th scope="col" class="num">Month</th><th scope="col" class="num">All time</th><th scope="col">Status</th></tr></thead><tbody>' +
       (rep.length ? rep.map(function (r) { return '<tr class="' + (r.reporting === 'none' ? 'pending' : '') + '"><td>' + avatar(r.name) + '</td><td class="num">' + C.fmtInt(r.today) + '</td><td class="num">' + C.fmtInt(r.month) + '</td><td class="num">' + C.fmtInt(r.all) + '</td><td>' + reportingStatusPill(r) + '</td></tr>'; }).join('') : '<tr><td colspan="5">' + empty('No active VRMs.') + '</td></tr>') +
       '</tbody></table></div></div>';
-    html += '<div class="grid2"><div><div class="sec"><h2>Month leaderboard</h2><span class="line"></span></div><div class="card">' + leaderboardHtml(m) + '</div></div><div><div class="sec"><h2>Team share</h2><span class="line"></span></div><div class="card">' + shareHtml(m) + '</div></div></div>';
+    html += '<div class="grid2"><div><div class="sec"><h2>Month leaderboard</h2><span class="line"></span></div><div class="card">' + leaderboardHtml(m, 'this month') + '</div></div><div><div class="sec"><h2>Team share</h2><span class="line"></span></div><div class="card">' + shareHtml(m, 'this month') + '</div></div></div>';
     if (A.error) html += '<div class="sec"><span class="line"></span></div>' + banner('err', 'Could not load admin details: ' + h(A.error) + ' <button type="button" class="btn link mini" data-action="admin-reload">Retry</button>');
     else if (!d) html += '<div class="loading-row" role="status">Loading administration details…</div>';
     else {
@@ -1238,6 +1393,14 @@
       html += '<div class="sec"><h2>Recent changes</h2><span class="line"></span><a class="btn ghost mini" href="#/activity">Full activity log</a></div><div class="card">' + auditTable(d.recent) + '</div>';
       if (isRole('admin')) {
         var I2 = A.integrity;
+        var sc = A.schedule;
+        html += '<div class="sec"><h2>Backups</h2><span class="line"></span></div><div class="card card-pad"><div class="status-panel"><div>' +
+          (!sc ? pill('none', 'Checking…') : sc.backupInstalled ? pill('filed', 'Daily backup on') : pill('none', 'Not scheduled')) + '</div><div class="grow">' +
+          (!sc ? 'Reading the backup schedule…' : (sc.backupInstalled ? 'A full copy of the database is saved to Google Drive every day at 01:00 IST' + (sc.maintenanceInstalled ? '; expired sessions are cleaned up hourly.' : '.') : 'No automatic backup is scheduled yet.') +
+            ' Last backup: <b>' + h(sc.lastBackupAt ? fmtTs(sc.lastBackupAt) : 'none yet') + '</b>' + (sc.lastBackupName ? ' (' + h(sc.lastBackupName) + ')' : '') + '.') +
+          '</div><div class="actions">' + (sc && !sc.backupInstalled ? '<button type="button" class="btn mini" data-action="schedule-install">Install daily backup</button>' : '') +
+          '<button type="button" class="btn ghost mini" data-action="schedule-backup"' + (sc ? '' : ' disabled') + '>Back up now</button></div></div>' +
+          '<p class="hint">Backups are copies of the database Sheet in the owner’s Google Drive, named “VRM MIS backup YYYY-MM-DD_HHMM”. Restore steps: docs/06 §9.</p></div>';
         html += '<div class="sec"><h2>Data health</h2><span class="line"></span><button type="button" class="btn ghost mini" data-action="integrity">Run integrity check</button></div><div class="card card-pad">' +
           (I2 ? (I2.error ? banner('err', h(I2.error)) : banner(I2.ok ? 'ok' : 'err', I2.ok ? '<b>All checks passed</b> at ' + h(fmtTs(I2.checkedAt)) + '.' : '<b>Problems found.</b> Review the counts below before relying on reports.') +
             '<div class="chips"><div class="chip"><span class="n">' + C.fmtInt(I2.active) + '</span><span class="l">Active entries</span></div><div class="chip"><span class="n">' + C.fmtInt(I2.deleted) + '</span><span class="l">Deleted (tombstones)</span></div>' +
@@ -1476,7 +1639,8 @@
   }
   function resetUi() {
     S.me = null; S.loaded = false; S.vrms = []; S.counts = []; S.zero = [];
-    var fresh = { trend: { mode: 'last12', vrmId: '' }, mis: { year: '', month: '', from: '', to: '', vrmId: '', sortKey: 'period', sortDir: 'desc' },
+    var fresh = { trend: { mode: 'last12', vrmId: '' }, dash: { preset: 'thisMonth', fy: '', from: '', to: '', vrmId: '', error: '' },
+      quick: { text: '', date: '', vrmId: '', busy: false, pending: null, result: null }, mis: { year: '', month: '', from: '', to: '', vrmId: '', sortKey: 'period', sortDir: 'desc' },
       input: { vrmId: '', date: '', text: '', result: null, pending: null, busy: false }, lookup: { text: '', results: null, busy: false },
       ledger: { q: '', vrmId: '', from: '', to: '', batchId: '', status: 'active', sort: 'date', dir: 'desc', page: 1, pageSize: 50, data: null, error: '', loading: false },
       logs: { from: '', to: '', actorId: '', eventAction: '', outcome: '', page: 1, pageSize: 50, data: null, error: '', loading: false },
@@ -1497,6 +1661,26 @@
   /* ================================ actions ================================ */
   var A = {
     'go': function (el) { go(el.getAttribute('data-route')); },
+    'dash-apply': function () {
+      var d = S.ui.dash, pick = $('input[name="dash-preset"]:checked');
+      var next = { preset: pick ? pick.value : d.preset, fy: $('#dash-fy').value, from: $('#dash-from').value, to: $('#dash-to').value, vrmId: d.vrmId, error: '' };
+      var p = C.presetPeriod(next, today());
+      if (!p.ok) { var e = $('#dash-filter-err'); e.textContent = p.error; e.hidden = false; return; }
+      S.ui.dash = next;
+      renderDashBody();
+      var s = $('#dash-filter summary'); if (s) s.focus();
+      announce('Showing ' + p.label + '.');
+    },
+    'quick-retry': function () { submitQuick(); },
+    'quick-discard': function () { S.ui.quick.pending = null; S.ui.quick.result = null; var b = $('#qa-result'); if (b) b.innerHTML = ''; },
+    'schedule-install': function (el) {
+      busy(el, true);
+      Api.call('installSchedule', {}, { timeout: 90000 }).then(function (d) { S.ui.admin.schedule = d; toast('Daily backup (01:00 IST) and hourly housekeeping are scheduled.', 'ok'); }, function (e) { toast('Could not schedule backups: ' + errMsg(e), 'err'); }).then(function () { renderAdminBody(); });
+    },
+    'schedule-backup': function (el) {
+      busy(el, true);
+      Api.call('runBackup', {}, { timeout: 180000 }).then(function (d) { S.ui.admin.schedule = d; toast('Backup created in Google Drive: ' + d.lastBackupName + '.', 'ok'); }, function (e) { toast('Backup failed: ' + errMsg(e), 'err'); }).then(function () { renderAdminBody(); });
+    },
     'refresh': function () { refreshData().then(function () { toast('Data refreshed.', 'ok', 2500); }, function () { /* toast shown */ }); },
     'logout': function () { logout(); },
     'boot-retry': function () { boot(); },
@@ -1543,7 +1727,8 @@
       var p = all ? C.resolvePeriod({ allTime: true }, today()) : misPeriod();
       if (!p.ok) { toast(p.error, 'warn'); return; }
       var filter = all ? { allTime: true } : { year: f.year, month: f.month, from: f.from, to: f.to, vrmId: f.vrmId };
-      var vrmId = all ? '' : f.vrmId;
+      var vrmId = isMember() ? S.me.assignedVrmId : all ? '' : f.vrmId;
+      if (isMember()) filter.vrmId = vrmId;
       exportReport(el, filter, { scope: vrmId ? vrmName(vrmId) : 'Whole team', period: p.label, expected: metricsFor(p, vrmId).scopeTotals.period }, fmt);
     },
     'input-clear': function () { var ta = $('#in-codes'); ta.value = ''; S.ui.input.text = ''; updatePasteStats(); ta.focus(); },
@@ -1801,6 +1986,21 @@
         if (form.id === 'first-pw') enterApp(); else { form.reset(); busy(btn, false); }
       }, function (e) { busy(btn, false); fail(e.message); });
     },
+    'quick-add': function () {
+      var q = S.ui.quick;
+      if (q.busy) return;
+      if (q.pending) { toast('The previous quick add is not confirmed yet. Retry it safely or discard it first.', 'warn'); return; }
+      var input = $('#qa-codes'), a = C.analyzePaste(input.value), date = $('#qa-date').value, sel = $('#qa-vrm');
+      if (sel) q.vrmId = sel.value;
+      var dc = C.checkActivationDate(date, today());
+      if (!q.vrmId || !canWrite(q.vrmId)) { toast('Choose the VRM these codes belong to.', 'warn'); if (sel) sel.focus(); return; }
+      if (!dc.ok) { toast('Activation date: ' + dc.reason, 'warn'); $('#qa-date').focus(); return; }
+      if (!a.summary.tokens) { toast('Type or paste at least one client code.', 'warn'); input.focus(); return; }
+      if (a.summary.tokens > C.MAX_ROWS) { toast('Quick add takes up to ' + C.MAX_ROWS + ' codes; use the import screen for more.', 'warn'); return; }
+      q.date = date; q.text = input.value; q.result = null;
+      q.pending = { requestId: C.uuid(), payload: { vrmId: q.vrmId, date: date, codes: a.codes } };
+      submitQuick();
+    },
     'save-codes': function (form) {
       var u = S.ui.input;
       if (u.busy) return;
@@ -1856,14 +2056,32 @@
   };
 
   var CH = {
+    'dash-preset': function (el) {
+      var custom = el.value === 'custom', fy = /^(q[1-4]|fy)$/.test(el.value);
+      $('#dash-from').disabled = !custom; $('#dash-to').disabled = !custom; $('#dash-fy').disabled = !fy;
+      var e = $('#dash-filter-err'); if (e) e.hidden = true;
+      if (custom) $('#dash-from').focus();
+    },
+    'dash-scope': function (el) { S.ui.dash.vrmId = el.value; renderDashBody(); var s = $('#daily-scope'); if (s) s.focus(); },
+    'mis-preset': function (el) {
+      if (!el.value) return;
+      var f = S.ui.mis, t = today(), p;
+      if (el.value === 'all') { var first = S.counts.reduce(function (m, c) { return !m || c[1] < m ? c[1] : m; }, ''); p = { ok: true, from: first || t, to: t }; }
+      else p = C.presetPeriod({ preset: el.value.replace(/^lastfy$/, 'fy'), fy: el.value === 'lastfy' ? C.fyStartYear(t) - 1 : '' }, t);
+      f.from = p.from; f.to = p.to;
+      $('#mis-from').value = f.from; $('#mis-to').value = f.to;
+      updateMisControls();
+      renderMisResults();
+    },
     trend: function () { S.ui.trend.vrmId = $('#trend-scope').value; S.ui.trend.mode = $('#trend-range').value; var b = $('#trend-body'); if (b) { b.innerHTML = trendBody(trendSeries()); drawCharts(); } },
     mis: function (el) {
-      var f = S.ui.mis;
+      var f = S.ui.mis, qp = $('#mis-preset');
+      if (qp) qp.value = '';
       f[el.name] = el.value;
       updateMisControls();
       renderMisResults();
     },
-    'input-vrm': function (el) { S.ui.input.vrmId = el.value; renderInputStatus(); },
+    'input-vrm': function (el) { S.ui.input.vrmId = el.value; renderInputStatus(); renderInputDaily(); },
     'input-date': function (el) { S.ui.input.date = el.value; renderInputStatus(); },
     'import-file': function (el) { var f = el.files && el.files[0]; if (f) readImportFile(f); },
     'import-sheet': function (el) { selectSheet(el.value); renderImportBody(); },
